@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    env_file:
+      - "../env/.env.local"
+    environment:
+      ENVIRONMENT: "local"
+      REDIS_URL: "redis://redis:6379/0"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7.2-alpine
+    env_file:
+      - "../env/.env.local"
+    environment:
+      ENVIRONMENT: "local"
+    ports:
+      - "6379:6379"
+
+  backend:
+    image: mail-tracko-local-backend
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    env_file:
+      - "../env/.env.local"
+    volumes:
+      - ../src:/app/src
+      - ../scripts:/app/scripts
+      - ../alembic.ini:/app/alembic.ini
+      - app_logs:/logs
+    command:
+      [
+        "uvicorn",
+        "src.main:create_app",
+        "--factory",
+        "--app-dir",
+        "/app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--reload",
+        "--reload-dir",
+        "/app/src",
+        "--reload-dir",
+        "/app/scripts",
+      ]
+    environment:
+      ENVIRONMENT: "local"
+    ports:
+      - "8080:8000"
+
+  background_worker:
+    image: mail-tracko-local-backend
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    env_file:
+      - "../env/.env.local"
+    environment:
+      ENVIRONMENT: "local"
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:latest
+    env_file:
+      - "../env/.env.local"
+    ports:
+      - "8428:8428"
+    environment:
+      ENVIRONMENT: "local"
+
+volumes:
+  postgres_data:
+  app_logs:

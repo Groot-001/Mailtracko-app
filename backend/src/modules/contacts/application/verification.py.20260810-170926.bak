@@ -1,0 +1,143 @@
+import asyncio
+from typing import Any
+
+import httpx
+
+from src.core.config.settings import config
+from src.shared.exceptions.base_exceptions import InvalidError, ServerError
+
+
+class EmailVerificationService:
+    """Live ZeroBounce verification with bounded retries and bulk concurrency."""
+
+    endpoint = "https://api.zerobounce.net/v2/validate"
+    max_attempts = 3
+    retry_delays = (0.25, 0.75)
+
+    async def _request(self, client: httpx.AsyncClient, email: str) -> dict[str, Any]:
+        last_error: Exception | None = None
+
+        for attempt in range(self.max_attempts):
+            try:
+                response = await client.get(
+                    self.endpoint,
+                    params={
+                        "api_key": config.ZEROBOUNCE_API_KEY,
+                        "email": email,
+                        "ip_address": "",
+                    },
+                )
+
+                if response.status_code in {401, 403}:
+                    raise InvalidError(
+                        error=(
+                            "Email verification is temporarily unavailable because "
+                            "the provider credentials were rejected. Contact your administrator."
+                        )
+                    )
+                if response.status_code == 429:
+                    raise ServerError(
+                        error=(
+                            "Email verification is temporarily rate limited. "
+                            "Try again shortly or check the provider quota."
+                        )
+                    )
+
+                response.raise_for_status()
+                try:
+                    return response.json()
+                except ValueError as exc:
+                    raise ServerError(
+                        error="The email verification provider returned an invalid response"
+                    ) from exc
+            except InvalidError:
+                raise
+            except ServerError:
+                raise
+            except (httpx.RequestError, httpx.HTTPStatusError) as exc:
+                last_error = exc
+                status_code = (
+                    exc.response.status_code
+                    if isinstance(exc, httpx.HTTPStatusError)
+                    and exc.response is not None
+                    else None
+                )
+                retryable = status_code is None or status_code >= 500
+                if not retryable or attempt == self.max_attempts - 1:
+                    break
+                await asyncio.sleep(self.retry_delays[attempt])
+
+        raise ServerError(
+            error="The email verification provider is currently unavailable",
+            internal_details=str(last_error) if last_error else None,
+        ) from last_error
+
+    async def verify(self, email: str) -> dict[str, Any]:
+        if not config.ZEROBOUNCE_API_KEY:
+            raise InvalidError(
+                error=(
+                    "Email verification is not available in this MailTracko environment yet. "
+                    "Contact your administrator to enable the verification service."
+                )
+            )
+
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            payload = await self._request(client, email)
+
+        provider_status = str(payload.get("status") or "").lower()
+        if provider_status not in {
+            "valid",
+            "invalid",
+            "catch-all",
+            "unknown",
+            "spamtrap",
+            "abuse",
+            "do_not_mail",
+        }:
+            raise ServerError(
+                error="The email verification provider returned an unknown status"
+            )
+
+        score_map = {
+            "valid": 100,
+            "catch-all": 60,
+            "unknown": 40,
+            "do_not_mail": 15,
+            "abuse": 10,
+            "spamtrap": 0,
+            "invalid": 0,
+        }
+        risk_map = {
+            "valid": "low",
+            "catch-all": "medium",
+            "unknown": "high",
+            "do_not_mail": "critical",
+            "abuse": "critical",
+            "spamtrap": "critical",
+            "invalid": "critical",
+        }
+        return {
+            "status": provider_status,
+            "sub_status": payload.get("sub_status"),
+            "score": score_map[provider_status],
+            "bounce_risk": risk_map[provider_status],
+            "details": {
+                "free_email": bool(payload.get("free_email", False)),
+                "did_you_mean": payload.get("did_you_mean"),
+                "account": payload.get("account"),
+                "domain": payload.get("domain"),
+                "domain_age_days": payload.get("domain_age_days"),
+                "smtp_provider": payload.get("smtp_provider"),
+                "mx_found": payload.get("mx_found"),
+                "mx_record": payload.get("mx_record"),
+            },
+        }
+
+    async def verify_many(self, emails: list[str]) -> list[dict[str, Any]]:
+        semaphore = asyncio.Semaphore(10)
+
+        async def guarded(email: str) -> dict[str, Any]:
+            async with semaphore:
+                return await self.verify(email)
+
+        return await asyncio.gather(*(guarded(email) for email in emails))

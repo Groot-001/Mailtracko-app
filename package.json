@@ -1,0 +1,21 @@
+{
+  "name": "mailtracko",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MailTracko full-stack email outreach platform",
+  "scripts": {
+    "postinstall": "npm --prefix frontend install",
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "lint": "npm --prefix frontend run lint",
+    "preview": "npm --prefix frontend run preview",
+    "frontend:install": "npm --prefix frontend install",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down --remove-orphans",
+    "docker:reset": "docker compose down -v --remove-orphans"
+  },
+  "engines": {
+    "node": ">=22",
+    "npm": ">=10"
+  }
+}

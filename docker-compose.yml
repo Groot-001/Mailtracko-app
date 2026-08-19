@@ -1,0 +1,189 @@
+name: mailtracko-integrated
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - .env.integration
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - mailtracko_private
+
+  redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - mailtracko_private
+
+  configcheck:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - .env.integration
+    command:
+      - python
+      - -m
+      - scripts.validate_runtime_config
+    restart: "no"
+    networks:
+      - mailtracko_private
+
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - .env.integration
+    command:
+      - alembic
+      - upgrade
+      - head
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - mailtracko_private
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env.integration
+    command:
+      - uvicorn
+      - src.main:create_app
+      - --factory
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    depends_on:
+      configcheck:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - uploads_data:/app/assets/uploads
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=5)"
+        ]
+      interval: 15s
+      timeout: 8s
+      retries: 10
+      start_period: 20s
+    networks:
+      - mailtracko_private
+
+  campaign_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env.integration
+    command:
+      - dramatiq
+      - src.modules.campaign.infrastructure.background_tasks.campaign_tasks
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    networks:
+      - mailtracko_private
+
+  campaign_scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env.integration
+    command:
+      - python
+      - -m
+      - scripts.campaign.run_scheduler
+    depends_on:
+      campaign_worker:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import os; assert int(os.getenv('CAMPAIGN_SCHEDULER_INTERVAL_SECONDS', '30')) >= 5"
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - mailtracko_private
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api/v1
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "3000:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - mailtracko_private
+      - mailtracko_public
+
+volumes:
+  postgres_data:
+  redis_data:
+  uploads_data:
+
+networks:
+  mailtracko_private:
+    driver: bridge
+
+  mailtracko_public:
+    driver: bridge

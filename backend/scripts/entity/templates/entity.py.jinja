@@ -1,0 +1,17 @@
+from datetime import datetime
+from sqlalchemy import String, Boolean, Integer, Float, DateTime, Text
+from sqlalchemy.orm import Mapped, mapped_column
+{% if needs_field_import %}from sqlalchemy import Field{% endif %}
+
+from src.shared.infrastructure.persistence.sqlalchemy.base import Base
+
+
+class {{ class_name }}(Base):
+    __tablename__ = "{{ entity_label }}s"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now)
+{% for field in fields %}
+    {{ field.name }}: Mapped[{{ field.type }}] = mapped_column({{ field.assignment if field.assignment else "" }})
+{% endfor %}

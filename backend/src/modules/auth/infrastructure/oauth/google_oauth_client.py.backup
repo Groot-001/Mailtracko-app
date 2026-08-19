@@ -1,0 +1,74 @@
+from dataclasses import dataclass
+from typing import Any
+from urllib.parse import urlencode
+
+from httpx import AsyncClient
+
+from src.core.config.settings import config
+from src.shared.exceptions.base_exceptions import InvalidError
+
+
+@dataclass
+class GoogleUserInfo:
+    id: str
+    email: str
+    verified_email: bool
+    name: str
+    picture: str | None = None
+
+
+GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
+
+SCOPES = [
+    "openid",
+    "email",
+    "profile",
+]
+
+
+class GoogleOAuthClient:
+    def __init__(self, client: AsyncClient | None = None):
+        self._client = client or AsyncClient()
+
+    def get_authorization_url(self, state: str) -> str:
+        if not config.GOOGLE_CLIENT_ID:
+            raise InvalidError(error="Google sign-in is not configured")
+        params = {
+            "client_id": config.GOOGLE_CLIENT_ID,
+            "redirect_uri": config.GOOGLE_REDIRECT_URI,
+            "response_type": "code",
+            "scope": " ".join(SCOPES),
+            "state": state,
+            "access_type": "offline",
+            "prompt": "consent",
+        }
+        return f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
+
+    async def exchange_code(self, code: str) -> dict[str, Any]:
+        if not config.GOOGLE_CLIENT_ID or not config.GOOGLE_CLIENT_SECRET:
+            raise InvalidError(error="Google sign-in is not configured")
+        data = {
+            "code": code,
+            "client_id": config.GOOGLE_CLIENT_ID,
+            "client_secret": config.GOOGLE_CLIENT_SECRET,
+            "redirect_uri": config.GOOGLE_REDIRECT_URI,
+            "grant_type": "authorization_code",
+        }
+        resp = await self._client.post(GOOGLE_TOKEN_URL, data=data)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_user_info(self, access_token: str) -> GoogleUserInfo:
+        headers = {"Authorization": f"Bearer {access_token}"}
+        resp = await self._client.get(GOOGLE_USERINFO_URL, headers=headers)
+        resp.raise_for_status()
+        data = resp.json()
+        return GoogleUserInfo(
+            id=data["id"],
+            email=data["email"],
+            verified_email=data.get("verified_email", False),
+            name=data.get("name", ""),
+            picture=data.get("picture"),
+        )

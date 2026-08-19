@@ -1,0 +1,25 @@
+.env.*
+.env
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual env
+.venv/
+venv/
+
+logs/
+
+
+# Ruff / Pyright
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyright/
+.pytest_logs/
+
+# OS
+.DS_Store
+
+
+*.mmdb

@@ -1,0 +1,87 @@
+Table org_organizations {
+  id integer [primary key]
+  uuid varchar [not null, unique]
+  name varchar [not null]
+}
+
+Table sys_auth_users {
+  id integer [primary key]
+  uuid varchar [not null, unique]
+  email varchar [not null]
+}
+
+Table contact_lists {
+  id integer [primary key]
+  uuid varchar [not null, unique]
+  organization_id integer [not null]
+  name varchar [not null]
+  description text
+  field_definitions json
+  created_by_id integer
+  updated_by_id integer
+  created_at timestamp [not null]
+  updated_at timestamp
+}
+
+Table contact_contacts {
+  id integer [primary key]
+  uuid varchar [not null, unique]
+  organization_id integer [not null]
+  contact_list_id integer [not null]
+  email varchar [not null]
+  first_name varchar
+  last_name varchar
+  company varchar
+  metadata json
+  subscribed boolean [not null, default: true]
+  unsubscribed_at timestamp
+  last_contacted_at timestamp
+  created_at timestamp [not null]
+  updated_at timestamp
+}
+
+Table contact_activities {
+  id integer [primary key]
+  uuid varchar [not null, unique]
+  contact_id integer [not null]
+  organization_id integer [not null]
+  activity_type varchar [not null]
+  description text
+  metadata json
+  created_at timestamp [not null]
+  updated_at timestamp
+}
+
+Table contact_import_logs {
+  id integer [primary key]
+  uuid varchar [not null, unique]
+  organization_id integer [not null]
+  contact_list_id integer
+  filename varchar [not null]
+  column_mapping json
+  total_rows integer [not null, default: 0]
+  success_count integer [not null, default: 0]
+  error_count integer [not null, default: 0]
+  errors json
+  status varchar [not null, default: 'pending']
+  created_by_id integer
+  updated_by_id integer
+  created_at timestamp [not null]
+  updated_at timestamp
+}
+
+Ref: contact_contacts.contact_list_id > contact_lists.id [delete: cascade]
+Ref: contact_activities.contact_id > contact_contacts.id [delete: cascade]
+Ref: contact_import_logs.contact_list_id > contact_lists.id [delete: cascade]
+
+Ref: contact_lists.organization_id > org_organizations.id
+Ref: contact_contacts.organization_id > org_organizations.id
+Ref: contact_activities.organization_id > org_organizations.id
+Ref: contact_import_logs.organization_id > org_organizations.id
+
+Ref: contact_lists.created_by_id > sys_auth_users.id
+Ref: contact_lists.updated_by_id > sys_auth_users.id
+Ref: contact_import_logs.created_by_id > sys_auth_users.id
+Ref: contact_import_logs.updated_by_id > sys_auth_users.id
+
+

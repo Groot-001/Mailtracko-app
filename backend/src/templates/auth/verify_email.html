@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Verify your email — MailTracko{% endblock %}
+
+{% block content %}
+<div style="text-align:center;margin-bottom:28px;">
+    <h1 class="heading" style="font-size:35px;font-weight:800;color:#6c2bd9;letter-spacing:-0.02em;margin:0 0 8px 0;">
+        Verify your email ✉️
+    </h1>
+    <p class="subtitle" style="font-size:15px;color:#64748b;line-height:1.5;margin:0;">
+        We're excited to have you on board with MailTracko.
+    </p>
+</div>
+
+<div class="card" style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:16px;padding:28px 32px;margin-bottom:28px;">
+    <h2 class="greeting" style="font-size:17px;font-weight:700;color:#1e293b;margin:0 0 12px 0;">
+        Hello <span class="greeting-name" style="color:#6c2bd9;">{{ user_name | default('there', boolean=True) | title }}</span>,
+    </h2>
+    <p class="body-text" style="font-size:14px;line-height:1.6;color:#475569;margin:0 0 20px 0;">
+        Thanks for signing up for MailTracko! You're now part of a smarter way to manage cold email campaigns and maximize deliverability.
+    </p>
+
+    <div class="code-box" style="background:#ffffff;border:1px solid #c4b5fd;border-radius:12px;padding:20px;text-align:center;margin-bottom:16px;box-shadow:0 2px 8px rgba(108,43,217,0.06);">
+        <div class="code-label" style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#7c3aed;margin-bottom:6px;">
+            Verification Code
+        </div>
+        <div class="code-value" style="font-size:32px;line-height:1.2;font-weight:800;letter-spacing:0.2em;color:#6c2bd9;font-family:Consolas, Monaco, monospace;">
+            {{ verification_code }}
+        </div>
+    </div>
+
+    <p class="small-text" style="font-size:12px;color:#64748b;text-align:center;margin:0;">
+        This code expires in 24 hours. If you didn't create an account, you can safely ignore this email.
+    </p>
+</div>
+
+<div style="text-align:center;margin-bottom:28px;">
+    <p class="support-text" style="font-size:14px;color:#475569;margin:0 0 4px 0;">
+        If you have any questions, we're here to help.
+    </p>
+    <p class="support-signoff" style="font-size:14px;font-weight:600;color:#1e293b;margin:0;">
+        Happy emailing! ✉️
+    </p>
+</div>
+
+<div class="divider" style="border-top:1px solid #e2e8f0;margin:0 0 28px 0;"></div>
+{% endblock %}

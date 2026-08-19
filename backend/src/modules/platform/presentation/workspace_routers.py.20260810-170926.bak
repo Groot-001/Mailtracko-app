@@ -1,0 +1,1059 @@
+import hashlib
+import secrets
+from datetime import UTC, datetime
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import HTMLResponse
+from sqlalchemy import desc, func, or_, select, text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.core.config.settings import config
+from src.core.utils.response import CustomResponse as cr
+from src.core.utils.response import CustomSuccessResponseSchema
+from src.modules.auth.infrastructure.models.user_model import UserModel
+from src.modules.campaign.infrastructure.models.campaign_models import (
+    CampaignModel,
+    CampaignRecipientModel,
+    CampaignSuppressionModel,
+)
+from src.modules.organization.infrastructure.models.organization_activity_model import (
+    OrganizationActivityModel,
+)
+from src.modules.organization.infrastructure.models.organization_member_model import (
+    OrganizationMemberModel,
+)
+from src.modules.platform.application.access import (
+    is_platform_admin_email,
+    load_workspace_context,
+    write_audit_log,
+)
+from src.modules.platform.application.unsubscribe import read_unsubscribe_token
+from src.modules.platform.infrastructure.models.platform_models import (
+    ApiKeyModel,
+    AppNotificationModel,
+    AuditLogModel,
+    FeatureFlagModel,
+    NotificationPreferenceModel,
+    PlatformSettingModel,
+    WebhookEndpointModel,
+)
+from src.modules.platform.presentation.schemas import (
+    ApiKeyCreateRequest,
+    MemberRoleUpdateRequest,
+    NotificationPreferenceRequest,
+    SuppressionCreateRequest,
+    WebhookCreateRequest,
+    WebhookUpdateRequest,
+)
+from src.shared.dependencies.access_guard import require_access
+from src.shared.exceptions.base_exceptions import (
+    ForbiddenError,
+    InvalidError,
+    NotFoundError,
+)
+from src.shared.infrastructure.db import get_async_session
+from src.shared.infrastructure.encryption.fernet_encryption import encrypt
+
+protected_router = APIRouter(
+    prefix="/platform",
+    dependencies=[Depends(require_access(authenticated=True, email_verified=True))],
+)
+public_router = APIRouter(prefix="/platform")
+router = APIRouter()
+AsyncSessionDep = Annotated[AsyncSession, Depends(get_async_session)]
+
+
+def _notification_payload(item: AppNotificationModel) -> dict:
+    return {
+        "uuid": item.uuid,
+        "notification_type": item.notification_type,
+        "title": item.title,
+        "body": item.body,
+        "action_url": item.action_url,
+        "metadata": item.metadata_,
+        "read_at": item.read_at,
+        "created_at": item.created_at,
+    }
+
+
+@protected_router.get("/access", response_model=CustomSuccessResponseSchema)
+async def platform_access(request: Request, session: AsyncSessionDep):
+    user = request.state.user
+    is_platform_admin = is_platform_admin_email(user.email)
+    context = None
+    try:
+        context = await load_workspace_context(request, session)
+    except ForbiddenError:
+        # A dedicated platform administrator is allowed to operate the global
+        # console without first creating or joining a customer workspace.
+        if not is_platform_admin:
+            raise
+
+    flags = (
+        (
+            await session.execute(
+                select(FeatureFlagModel).where(FeatureFlagModel.is_enabled.is_(True))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    effective_flags: dict[str, bool] = {}
+    for flag in flags:
+        override = (
+            (flag.organization_overrides or {}).get(context.organization.uuid)
+            if context is not None
+            else None
+        )
+        effective_flags[flag.key] = bool(flag.is_enabled if override is None else override)
+    maintenance = (
+        (
+            await session.execute(
+                select(PlatformSettingModel).where(
+                    PlatformSettingModel.key == "maintenance"
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return cr.success(
+        data={
+            "is_platform_admin": is_platform_admin,
+            "workspace_role": context.member.role_code if context is not None else None,
+            "organization_uuid": context.organization.uuid if context is not None else None,
+            "feature_flags": effective_flags,
+            "maintenance": maintenance.value
+            if maintenance and maintenance.is_public
+            else None,
+            "support_email": config.PUBLIC_SUPPORT_EMAIL,
+            "chatboq_widget_url": config.CHATBOQ_WIDGET_URL,
+            "integrations": {
+                "google_login_configured": bool(
+                    config.GOOGLE_CLIENT_ID and config.GOOGLE_CLIENT_SECRET
+                ),
+                "gmail_sender_configured": bool(
+                    (config.GOOGLE_MAIL_CLIENT_ID or config.GOOGLE_CLIENT_ID)
+                    and (config.GOOGLE_MAIL_CLIENT_SECRET or config.GOOGLE_CLIENT_SECRET)
+                ),
+                "google_sheets_configured": bool(
+                    (config.GOOGLE_SHEETS_CLIENT_ID or config.GOOGLE_CLIENT_ID)
+                    and (config.GOOGLE_SHEETS_CLIENT_SECRET or config.GOOGLE_CLIENT_SECRET)
+                ),
+                "email_verification_configured": bool(config.ZEROBOUNCE_API_KEY),
+                "cloudinary_configured": bool(
+                    config.CLOUDINARY_CLOUD_NAME
+                    and config.CLOUDINARY_API_KEY
+                    and config.CLOUDINARY_API_SECRET
+                ),
+                "local_uploads_enabled": config.ENVIRONMENT.value != "production",
+            },
+        },
+        message="Platform access retrieved",
+    )
+
+
+@protected_router.get(
+    "/workspace/dashboard", response_model=CustomSuccessResponseSchema
+)
+async def workspace_dashboard(request: Request, session: AsyncSessionDep):
+    context = await load_workspace_context(request, session)
+    org_id = context.organization.id
+    counts = {}
+    for key, table_name, condition in (
+        ("contacts", "contact_contacts", "organization_id = :org_id"),
+        (
+            "contact_lists",
+            "contact_lists",
+            "organization_id = :org_id AND deleted_at IS NULL",
+        ),
+        ("templates", "templates", "organization_id = :org_id AND deleted_at IS NULL"),
+        (
+            "sender_accounts",
+            "email_accounts",
+            "organization_id = :org_id AND deleted_at IS NULL",
+        ),
+        ("campaigns", "campaigns", "organization_id = :org_id AND deleted_at IS NULL"),
+        (
+            "team_members",
+            "org_organization_members",
+            "organization_id = :org_id AND status = 'active' AND deleted_at IS NULL",
+        ),
+    ):
+        counts[key] = int(
+            (
+                await session.execute(
+                    text(f"SELECT COUNT(*) FROM {table_name} WHERE {condition}"),
+                    {"org_id": org_id},
+                )
+            ).scalar()
+            or 0
+        )
+
+    campaign_status_rows = (
+        await session.execute(
+            select(CampaignModel.status, func.count(CampaignModel.id))
+            .where(
+                CampaignModel.organization_id == org_id,
+                CampaignModel.deleted_at.is_(None),
+            )
+            .group_by(CampaignModel.status)
+        )
+    ).all()
+    engagement = (
+        await session.execute(
+            select(
+                func.count(CampaignRecipientModel.id).filter(
+                    CampaignRecipientModel.sent_at.is_not(None)
+                ),
+                func.count(CampaignRecipientModel.id).filter(
+                    CampaignRecipientModel.opened_at.is_not(None)
+                ),
+                func.count(CampaignRecipientModel.id).filter(
+                    CampaignRecipientModel.clicked_at.is_not(None)
+                ),
+                func.count(CampaignRecipientModel.id).filter(
+                    CampaignRecipientModel.replied_at.is_not(None)
+                ),
+                func.count(CampaignRecipientModel.id).filter(
+                    CampaignRecipientModel.bounced_at.is_not(None)
+                ),
+            ).where(CampaignRecipientModel.organization_id == org_id)
+        )
+    ).one()
+    sent, opened, clicked, replied, bounced = [int(value or 0) for value in engagement]
+    return cr.success(
+        data={
+            "counts": counts,
+            "campaign_statuses": {
+                status: int(total) for status, total in campaign_status_rows
+            },
+            "engagement": {
+                "sent": sent,
+                "opened": opened,
+                "clicked": clicked,
+                "replied": replied,
+                "bounced": bounced,
+                "open_rate": round((opened / sent) * 100, 2) if sent else 0,
+                "click_rate": round((clicked / sent) * 100, 2) if sent else 0,
+                "reply_rate": round((replied / sent) * 100, 2) if sent else 0,
+                "bounce_rate": round((bounced / sent) * 100, 2) if sent else 0,
+            },
+        },
+        message="Workspace dashboard retrieved",
+    )
+
+
+@protected_router.get(
+    "/workspace/team-performance", response_model=CustomSuccessResponseSchema
+)
+async def team_performance(request: Request, session: AsyncSessionDep):
+    context = await load_workspace_context(request, session, {"owner", "admin"})
+    rows = (
+        await session.execute(
+            select(
+                UserModel.uuid,
+                UserModel.full_name,
+                UserModel.email,
+                OrganizationMemberModel.role_code,
+                func.count(func.distinct(CampaignModel.id)).label("campaigns"),
+                func.count(CampaignRecipientModel.id)
+                .filter(CampaignRecipientModel.sent_at.is_not(None))
+                .label("sent"),
+                func.count(CampaignRecipientModel.id)
+                .filter(CampaignRecipientModel.replied_at.is_not(None))
+                .label("replied"),
+            )
+            .join(
+                OrganizationMemberModel, OrganizationMemberModel.user_id == UserModel.id
+            )
+            .outerjoin(
+                CampaignModel,
+                (CampaignModel.created_by_id == UserModel.id)
+                & (CampaignModel.organization_id == context.organization.id),
+            )
+            .outerjoin(
+                CampaignRecipientModel,
+                CampaignRecipientModel.campaign_id == CampaignModel.id,
+            )
+            .where(
+                OrganizationMemberModel.organization_id == context.organization.id,
+                OrganizationMemberModel.status == "active",
+                OrganizationMemberModel.deleted_at.is_(None),
+            )
+            .group_by(
+                UserModel.uuid,
+                UserModel.full_name,
+                UserModel.email,
+                OrganizationMemberModel.role_code,
+            )
+            .order_by(desc("sent"), UserModel.full_name.asc())
+        )
+    ).all()
+    items = [
+        {
+            "user_uuid": row.uuid,
+            "full_name": row.full_name,
+            "email": row.email,
+            "role_code": row.role_code,
+            "campaigns": int(row.campaigns or 0),
+            "sent": int(row.sent or 0),
+            "replied": int(row.replied or 0),
+            "reply_rate": round((int(row.replied or 0) / int(row.sent or 0)) * 100, 2)
+            if row.sent
+            else 0,
+        }
+        for row in rows
+    ]
+    return cr.success(data={"items": items}, message="Team performance retrieved")
+
+
+@protected_router.patch(
+    "/workspace/members/{member_uuid}/role", response_model=CustomSuccessResponseSchema
+)
+async def update_member_role(
+    request: Request,
+    member_uuid: str,
+    body: MemberRoleUpdateRequest,
+    session: AsyncSessionDep,
+):
+    context = await load_workspace_context(request, session, {"owner"})
+    member = (
+        (
+            await session.execute(
+                select(OrganizationMemberModel).where(
+                    OrganizationMemberModel.uuid == member_uuid,
+                    OrganizationMemberModel.organization_id == context.organization.id,
+                    OrganizationMemberModel.deleted_at.is_(None),
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if not member:
+        raise NotFoundError(error="Organization member not found")
+    if member.role_code == "owner":
+        raise InvalidError(error="The owner role cannot be changed from this action")
+    previous = member.role_code
+    member.role_code = body.role_code
+    member.updated_at = datetime.now(UTC)
+    await write_audit_log(
+        session,
+        request,
+        action="workspace.member_role_changed",
+        resource_type="organization_member",
+        resource_uuid=member.uuid,
+        metadata={"from": previous, "to": body.role_code},
+        organization_id=context.organization.id,
+    )
+    await session.commit()
+    return cr.success(
+        data={"uuid": member.uuid, "role_code": member.role_code},
+        message="Member role updated",
+    )
+
+
+@protected_router.get("/preferences", response_model=CustomSuccessResponseSchema)
+async def get_preferences(request: Request, session: AsyncSessionDep):
+    context = await load_workspace_context(request, session)
+    preference = (
+        (
+            await session.execute(
+                select(NotificationPreferenceModel).where(
+                    NotificationPreferenceModel.organization_id
+                    == context.organization.id,
+                    NotificationPreferenceModel.user_id == request.state.user_id,
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    data = {
+        "email_enabled": preference.email_enabled if preference else True,
+        "in_app_enabled": preference.in_app_enabled if preference else True,
+        "categories": preference.categories if preference else {},
+    }
+    return cr.success(data=data, message="Notification preferences retrieved")
+
+
+@protected_router.put("/preferences", response_model=CustomSuccessResponseSchema)
+async def update_preferences(
+    request: Request,
+    body: NotificationPreferenceRequest,
+    session: AsyncSessionDep,
+):
+    context = await load_workspace_context(request, session)
+    preference = (
+        (
+            await session.execute(
+                select(NotificationPreferenceModel).where(
+                    NotificationPreferenceModel.organization_id
+                    == context.organization.id,
+                    NotificationPreferenceModel.user_id == request.state.user_id,
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if not preference:
+        preference = NotificationPreferenceModel(
+            organization_id=context.organization.id,
+            user_id=request.state.user_id,
+            **body.model_dump(),
+        )
+        session.add(preference)
+    else:
+        preference.email_enabled = body.email_enabled
+        preference.in_app_enabled = body.in_app_enabled
+        preference.categories = body.categories
+        preference.updated_at = datetime.now(UTC)
+    await write_audit_log(
+        session,
+        request,
+        action="workspace.notification_preferences_updated",
+        resource_type="notification_preference",
+        organization_id=context.organization.id,
+    )
+    await session.commit()
+    return cr.success(
+        data=body.model_dump(), message="Notification preferences updated"
+    )
+
+
+@protected_router.get("/notifications", response_model=CustomSuccessResponseSchema)
+async def list_notifications(
+    request: Request,
+    session: AsyncSessionDep,
+    unread_only: bool = Query(default=False),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+):
+    await load_workspace_context(request, session)
+    filters = [AppNotificationModel.user_id == request.state.user_id]
+    if unread_only:
+        filters.append(AppNotificationModel.read_at.is_(None))
+    total = int(
+        (
+            await session.execute(
+                select(func.count(AppNotificationModel.id)).where(*filters)
+            )
+        ).scalar()
+        or 0
+    )
+    items = (
+        (
+            await session.execute(
+                select(AppNotificationModel)
+                .where(*filters)
+                .order_by(AppNotificationModel.created_at.desc())
+                .limit(limit)
+                .offset(offset)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return cr.success(
+        data={"items": [_notification_payload(item) for item in items], "total": total},
+        message="Notifications retrieved",
+    )
+
+
+@protected_router.post(
+    "/notifications/{notification_uuid}/read",
+    response_model=CustomSuccessResponseSchema,
+)
+async def mark_notification_read(
+    request: Request,
+    notification_uuid: str,
+    session: AsyncSessionDep,
+):
+    await load_workspace_context(request, session)
+    item = (
+        (
+            await session.execute(
+                select(AppNotificationModel).where(
+                    AppNotificationModel.uuid == notification_uuid,
+                    AppNotificationModel.user_id == request.state.user_id,
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if not item:
+        raise NotFoundError(error="Notification not found")
+    item.read_at = item.read_at or datetime.now(UTC)
+    await session.commit()
+    return cr.success(
+        data=_notification_payload(item), message="Notification marked as read"
+    )
+
+
+@protected_router.post(
+    "/notifications/read-all", response_model=CustomSuccessResponseSchema
+)
+async def mark_all_notifications_read(request: Request, session: AsyncSessionDep):
+    await load_workspace_context(request, session)
+    await session.execute(
+        text(
+            "UPDATE app_notifications SET read_at = COALESCE(read_at, :now), updated_at = :now "
+            "WHERE user_id = :user_id"
+        ),
+        {"now": datetime.now(UTC), "user_id": request.state.user_id},
+    )
+    await session.commit()
+    return cr.success(
+        data={"updated": True}, message="All notifications marked as read"
+    )
+
+
+@protected_router.get("/api-keys", response_model=CustomSuccessResponseSchema)
+async def list_api_keys(request: Request, session: AsyncSessionDep):
+    context = await load_workspace_context(request, session, {"owner", "admin"})
+    items = (
+        (
+            await session.execute(
+                select(ApiKeyModel)
+                .where(ApiKeyModel.organization_id == context.organization.id)
+                .order_by(ApiKeyModel.created_at.desc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    payload = [
+        {
+            "uuid": item.uuid,
+            "name": item.name,
+            "key_prefix": item.key_prefix,
+            "scopes": item.scopes,
+            "last_used_at": item.last_used_at,
+            "expires_at": item.expires_at,
+            "revoked_at": item.revoked_at,
+            "created_at": item.created_at,
+        }
+        for item in items
+    ]
+    return cr.success(data={"items": payload}, message="API keys retrieved")
+
+
+@protected_router.post("/api-keys", response_model=CustomSuccessResponseSchema)
+async def create_api_key(
+    request: Request,
+    body: ApiKeyCreateRequest,
+    session: AsyncSessionDep,
+):
+    context = await load_workspace_context(request, session, {"owner", "admin"})
+    if body.expires_at and body.expires_at <= datetime.now(UTC):
+        raise InvalidError(error="API key expiration must be in the future")
+    secret = f"mtk_live_{secrets.token_urlsafe(32)}"
+    item = ApiKeyModel(
+        organization_id=context.organization.id,
+        created_by_id=request.state.user_id,
+        name=body.name.strip(),
+        key_prefix=secret[:16],
+        key_hash=hashlib.sha256(secret.encode()).hexdigest(),
+        scopes=body.scopes,
+        expires_at=body.expires_at,
+    )
+    session.add(item)
+    await session.flush()
+    await write_audit_log(
+        session,
+        request,
+        action="workspace.api_key_created",
+        resource_type="api_key",
+        resource_uuid=item.uuid,
+        metadata={"name": item.name, "scopes": item.scopes},
+        organization_id=context.organization.id,
+    )
+    await session.commit()
+    return cr.success(
+        data={
+            "uuid": item.uuid,
+            "name": item.name,
+            "key": secret,
+            "key_prefix": item.key_prefix,
+            "scopes": item.scopes,
+            "expires_at": item.expires_at,
+        },
+        message="API key created. Copy it now; it will not be shown again.",
+    )
+
+
+@protected_router.delete(
+    "/api-keys/{key_uuid}", response_model=CustomSuccessResponseSchema
+)
+async def revoke_api_key(request: Request, key_uuid: str, session: AsyncSessionDep):
+    context = await load_workspace_context(request, session, {"owner", "admin"})
+    item = (
+        (
+            await session.execute(
+                select(ApiKeyModel).where(
+                    ApiKeyModel.uuid == key_uuid,
+                    ApiKeyModel.organization_id == context.organization.id,
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if not item:
+        raise NotFoundError(error="API key not found")
+    item.revoked_at = item.revoked_at or datetime.now(UTC)
+    await write_audit_log(
+        session,
+        request,
+        action="workspace.api_key_revoked",
+        resource_type="api_key",
+        resource_uuid=item.uuid,
+        organization_id=context.organization.id,
+    )
+    await session.commit()
+    return cr.success(
+        data={"uuid": item.uuid, "revoked_at": item.revoked_at},
+        message="API key revoked",
+    )
+
+
+@protected_router.get("/webhooks", response_model=CustomSuccessResponseSchema)
+async def list_webhooks(request: Request, session: AsyncSessionDep):
+    context = await load_workspace_context(request, session, {"owner", "admin"})
+    items = (
+        (
+            await session.execute(
+                select(WebhookEndpointModel)
+                .where(WebhookEndpointModel.organization_id == context.organization.id)
+                .order_by(WebhookEndpointModel.created_at.desc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return cr.success(
+        data={
+            "items": [
+                {
+                    "uuid": item.uuid,
+                    "name": item.name,
+                    "url": item.url,
+                    "events": item.events,
+                    "is_active": item.is_active,
+                    "last_delivery_at": item.last_delivery_at,
+                    "last_status_code": item.last_status_code,
+                    "failure_count": item.failure_count,
+                    "created_at": item.created_at,
+                }
+                for item in items
+            ]
+        },
+        message="Webhook endpoints retrieved",
+    )
+
+
+@protected_router.post("/webhooks", response_model=CustomSuccessResponseSchema)
+async def create_webhook(
+    request: Request,
+    body: WebhookCreateRequest,
+    session: AsyncSessionDep,
+):
+    context = await load_workspace_context(request, session, {"owner", "admin"})
+    secret = f"whsec_{secrets.token_urlsafe(32)}"
+    item = WebhookEndpointModel(
+        organization_id=context.organization.id,
+        name=body.name.strip(),
+        url=str(body.url),
+        events=body.events,
+        secret_encrypted=encrypt(secret),
+    )
+    session.add(item)
+    await session.flush()
+    await write_audit_log(
+        session,
+        request,
+        action="workspace.webhook_created",
+        resource_type="webhook_endpoint",
+        resource_uuid=item.uuid,
+        metadata={"url": item.url, "events": item.events},
+        organization_id=context.organization.id,
+    )
+    await session.commit()
+    return cr.success(
+        data={
+            "uuid": item.uuid,
+            "name": item.name,
+            "url": item.url,
+            "events": item.events,
+            "secret": secret,
+        },
+        message="Webhook created. Copy the signing secret now.",
+    )
+
+
+@protected_router.patch(
+    "/webhooks/{webhook_uuid}", response_model=CustomSuccessResponseSchema
+)
+async def update_webhook(
+    request: Request,
+    webhook_uuid: str,
+    body: WebhookUpdateRequest,
+    session: AsyncSessionDep,
+):
+    context = await load_workspace_context(request, session, {"owner", "admin"})
+    item = (
+        (
+            await session.execute(
+                select(WebhookEndpointModel).where(
+                    WebhookEndpointModel.uuid == webhook_uuid,
+                    WebhookEndpointModel.organization_id == context.organization.id,
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if not item:
+        raise NotFoundError(error="Webhook endpoint not found")
+    values = body.model_dump(exclude_unset=True)
+    if "url" in values and values["url"] is not None:
+        values["url"] = str(values["url"])
+    for key, value in values.items():
+        setattr(item, key, value)
+    item.updated_at = datetime.now(UTC)
+    await write_audit_log(
+        session,
+        request,
+        action="workspace.webhook_updated",
+        resource_type="webhook_endpoint",
+        resource_uuid=item.uuid,
+        metadata={"fields": sorted(values)},
+        organization_id=context.organization.id,
+    )
+    await session.commit()
+    return cr.success(data={"uuid": item.uuid, **values}, message="Webhook updated")
+
+
+@protected_router.delete(
+    "/webhooks/{webhook_uuid}", response_model=CustomSuccessResponseSchema
+)
+async def delete_webhook(request: Request, webhook_uuid: str, session: AsyncSessionDep):
+    context = await load_workspace_context(request, session, {"owner", "admin"})
+    item = (
+        (
+            await session.execute(
+                select(WebhookEndpointModel).where(
+                    WebhookEndpointModel.uuid == webhook_uuid,
+                    WebhookEndpointModel.organization_id == context.organization.id,
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if not item:
+        raise NotFoundError(error="Webhook endpoint not found")
+    await write_audit_log(
+        session,
+        request,
+        action="workspace.webhook_deleted",
+        resource_type="webhook_endpoint",
+        resource_uuid=item.uuid,
+        organization_id=context.organization.id,
+    )
+    await session.delete(item)
+    await session.commit()
+    return cr.success(data={"uuid": webhook_uuid}, message="Webhook deleted")
+
+
+@protected_router.get("/audit-logs", response_model=CustomSuccessResponseSchema)
+async def list_audit_logs(
+    request: Request,
+    session: AsyncSessionDep,
+    search: str | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+):
+    context = await load_workspace_context(request, session, {"owner", "admin"})
+    filters = [AuditLogModel.organization_id == context.organization.id]
+    if search:
+        pattern = f"%{search.strip()}%"
+        filters.append(
+            or_(
+                AuditLogModel.action.ilike(pattern),
+                AuditLogModel.resource_type.ilike(pattern),
+                AuditLogModel.resource_uuid.ilike(pattern),
+            )
+        )
+    items = (
+        await session.execute(
+            select(AuditLogModel, UserModel.full_name, UserModel.email)
+            .outerjoin(UserModel, UserModel.id == AuditLogModel.actor_user_id)
+            .where(*filters)
+            .order_by(AuditLogModel.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+    ).all()
+    org_activities = (
+        (
+            await session.execute(
+                select(OrganizationActivityModel)
+                .where(
+                    OrganizationActivityModel.organization_id
+                    == context.organization.id,
+                    OrganizationActivityModel.deleted_at.is_(None),
+                )
+                .order_by(OrganizationActivityModel.created_at.desc())
+                .limit(50)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    payload = [
+        {
+            "uuid": log.uuid,
+            "action": log.action,
+            "resource_type": log.resource_type,
+            "resource_uuid": log.resource_uuid,
+            "metadata": log.metadata_,
+            "ip_address": log.ip_address,
+            "actor": {"name": actor_name, "email": actor_email},
+            "created_at": log.created_at,
+        }
+        for log, actor_name, actor_email in items
+    ]
+    payload.extend(
+        {
+            "uuid": item.uuid,
+            "action": item.activity_type,
+            "resource_type": "organization_activity",
+            "resource_uuid": None,
+            "metadata": {"title": item.title, "target_email": item.target_email},
+            "ip_address": None,
+            "actor": None,
+            "created_at": item.created_at,
+        }
+        for item in org_activities
+    )
+    payload.sort(
+        key=lambda item: item["created_at"] or datetime.min.replace(tzinfo=UTC),
+        reverse=True,
+    )
+    return cr.success(data={"items": payload[:limit]}, message="Audit logs retrieved")
+
+
+@protected_router.get("/suppressions", response_model=CustomSuccessResponseSchema)
+async def list_suppressions(
+    request: Request,
+    session: AsyncSessionDep,
+    search: str | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+):
+    context = await load_workspace_context(request, session)
+    filters = [
+        CampaignSuppressionModel.organization_id == context.organization.id,
+        CampaignSuppressionModel.active.is_(True),
+    ]
+    if search:
+        filters.append(
+            CampaignSuppressionModel.normalized_email.ilike(f"%{search.strip()}%")
+        )
+    total = int(
+        (
+            await session.execute(
+                select(func.count(CampaignSuppressionModel.id)).where(*filters)
+            )
+        ).scalar()
+        or 0
+    )
+    items = (
+        (
+            await session.execute(
+                select(CampaignSuppressionModel)
+                .where(*filters)
+                .order_by(CampaignSuppressionModel.suppressed_at.desc())
+                .limit(limit)
+                .offset(offset)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return cr.success(
+        data={
+            "items": [
+                {
+                    "uuid": item.uuid,
+                    "email": item.normalized_email,
+                    "reason": item.reason,
+                    "active": item.active,
+                    "suppressed_at": item.suppressed_at,
+                    "source_campaign_id": item.source_campaign_id,
+                }
+                for item in items
+            ],
+            "total": total,
+        },
+        message="Suppression list retrieved",
+    )
+
+
+@protected_router.post("/suppressions", response_model=CustomSuccessResponseSchema)
+async def add_suppression(
+    request: Request,
+    body: SuppressionCreateRequest,
+    session: AsyncSessionDep,
+):
+    context = await load_workspace_context(request, session, {"owner", "admin"})
+    email = str(body.email).strip().lower()
+    item = (
+        (
+            await session.execute(
+                select(CampaignSuppressionModel).where(
+                    CampaignSuppressionModel.organization_id == context.organization.id,
+                    CampaignSuppressionModel.normalized_email == email,
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    now = datetime.now(UTC)
+    if not item:
+        item = CampaignSuppressionModel(
+            organization_id=context.organization.id,
+            normalized_email=email,
+            reason=body.reason,
+            active=True,
+            suppressed_at=now,
+        )
+        session.add(item)
+    else:
+        item.reason = body.reason
+        item.active = True
+        item.suppressed_at = now
+        item.updated_at = now
+    await session.execute(
+        text(
+            "UPDATE contact_contacts SET subscribed = false, unsubscribed_at = COALESCE(unsubscribed_at, :now), "
+            "updated_at = :now WHERE organization_id = :org_id AND lower(email) = :email"
+        ),
+        {"now": now, "org_id": context.organization.id, "email": email},
+    )
+    await session.flush()
+    await write_audit_log(
+        session,
+        request,
+        action="contacts.suppressed",
+        resource_type="suppression",
+        resource_uuid=item.uuid,
+        metadata={"email": email, "reason": body.reason},
+        organization_id=context.organization.id,
+    )
+    await session.commit()
+    return cr.success(
+        data={"uuid": item.uuid, "email": email, "reason": item.reason},
+        message="Contact suppressed",
+    )
+
+
+@protected_router.delete(
+    "/suppressions/{suppression_uuid}", response_model=CustomSuccessResponseSchema
+)
+async def remove_suppression(
+    request: Request,
+    suppression_uuid: str,
+    session: AsyncSessionDep,
+):
+    context = await load_workspace_context(request, session, {"owner", "admin"})
+    item = (
+        (
+            await session.execute(
+                select(CampaignSuppressionModel).where(
+                    CampaignSuppressionModel.uuid == suppression_uuid,
+                    CampaignSuppressionModel.organization_id == context.organization.id,
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if not item:
+        raise NotFoundError(error="Suppression entry not found")
+    item.active = False
+    item.updated_at = datetime.now(UTC)
+    await write_audit_log(
+        session,
+        request,
+        action="contacts.unsuppressed",
+        resource_type="suppression",
+        resource_uuid=item.uuid,
+        metadata={"email": item.normalized_email},
+        organization_id=context.organization.id,
+    )
+    await session.commit()
+    return cr.success(
+        data={"uuid": item.uuid, "active": False}, message="Suppression removed"
+    )
+
+
+@public_router.get("/unsubscribe", response_class=HTMLResponse)
+async def one_click_unsubscribe(token: str, session: AsyncSessionDep):
+    payload = read_unsubscribe_token(token)
+    organization_id = int(payload["organization_id"])
+    email = str(payload["email"]).lower()
+    existing = (
+        (
+            await session.execute(
+                select(CampaignSuppressionModel).where(
+                    CampaignSuppressionModel.organization_id == organization_id,
+                    CampaignSuppressionModel.normalized_email == email,
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    now = datetime.now(UTC)
+    if existing:
+        existing.active = True
+        existing.reason = "unsubscribed"
+        existing.suppressed_at = now
+        existing.updated_at = now
+    else:
+        session.add(
+            CampaignSuppressionModel(
+                organization_id=organization_id,
+                normalized_email=email,
+                reason="unsubscribed",
+                active=True,
+                suppressed_at=now,
+            )
+        )
+    await session.execute(
+        text(
+            "UPDATE contact_contacts SET subscribed = false, unsubscribed_at = COALESCE(unsubscribed_at, :now), "
+            "updated_at = :now WHERE organization_id = :org_id AND lower(email) = :email"
+        ),
+        {"now": now, "org_id": organization_id, "email": email},
+    )
+    await session.commit()
+    return HTMLResponse(
+        "<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'>"
+        "<title>Unsubscribed</title></head><body style='font-family:system-ui;background:#fbfaf6;padding:48px'>"
+        "<main style='max-width:560px;margin:auto;background:white;padding:32px;border-radius:20px;border:1px solid #e6dec7'>"
+        "<h1 style='margin-top:0'>You are unsubscribed</h1>"
+        "<p>This email address will no longer receive MailTracko campaigns from this sender.</p>"
+        "</main></body></html>"
+    )
+
+
+router.include_router(public_router)
+router.include_router(protected_router)

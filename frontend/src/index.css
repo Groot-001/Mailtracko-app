@@ -1,0 +1,790 @@
+@import "tailwindcss";
+
+@theme {
+  /* surface group */
+  --color-surface: #f9f9f9;
+  --color-surface-dim: #dadada;
+  --color-surface-bright: #f9f9f9;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f4f3f3;
+  --color-surface-container: #eeeeee;
+  --color-surface-container-high: #e8e8e8;
+  --color-surface-container-highest: #e2e2e2;
+  --color-on-surface: #1a1c1c;
+  --color-on-surface-variant: #4c4736;
+  --color-surface-variant: #e2e2e2;
+  --color-surface-blur: #e5c52b33;
+
+  /* inverse */
+  --color-inverse-surface: #2f3131;
+  --color-inverse-on-surface: #f1f1f1;
+  --color-inverse-primary: #e2c635;
+
+  /* outline */
+  --color-outline: #7d7764;
+  --color-outline-variant: #cec6b0;
+
+  /* primary */
+  --color-surface-tint: #6e5e00;
+  --color-primary: #8f740d;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #f1d442;
+  --color-on-primary-container: #6a5b00;
+  --color-primary-fixed: #ffe257;
+  --color-primary-fixed-dim: #e2c635;
+  --color-on-primary-fixed: #211b00;
+  --color-on-primary-fixed-variant: #534600;
+
+  /* secondary */
+  --color-secondary: #6b5e28;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #f2df9c;
+  --color-on-secondary-container: #6f622c;
+  --color-secondary-fixed: #f5e29f;
+  --color-secondary-fixed-dim: #d7c685;
+  --color-on-secondary-fixed: #221b00;
+  --color-on-secondary-fixed-variant: #524612;
+
+  /* tertiary */
+  --color-tertiary: #2a6676;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #a3ddf0;
+  --color-on-tertiary-container: #266373;
+  --color-tertiary-fixed: #b2ebfe;
+  --color-tertiary-fixed-dim: #96cfe2;
+  --color-on-tertiary-fixed: #001f27;
+  --color-on-tertiary-fixed-variant: #044e5d;
+
+  /* error */
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  /* background */
+  --color-background: #f9f9f9;
+  --color-on-background: #1a1c1c;
+
+  --text-display-lg: 36px;
+  --text-display-lg--line-height: 44px;
+  --text-display-lg--font-weight: 700;
+  --text-display-lg--letter-spacing: -0.02em;
+
+  --text-headline-md: 24px;
+  --text-headline-md--line-height: 32px;
+  --text-headline-md--font-weight: 600;
+  --text-headline-md--letter-spacing: -0.01em;
+
+  --text-title-sm: 18px;
+  --text-title-sm--line-height: 28px;
+  --text-title-sm--font-weight: 600;
+
+  --text-body-md: 16px;
+  --text-body-md--line-height: 24px;
+  --text-body-md--font-weight: 400;
+
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 20px;
+  --text-body-sm--font-weight: 400;
+
+  --text-table-data: 14px;
+  --text-table-data--line-height: 20px;
+  --text-table-data--font-weight: 500;
+
+  --text-label-caps: 12px;
+  --text-label-caps--line-height: 16px;
+  --text-label-caps--font-weight: 600;
+  --text-label-caps--letter-spacing: 0.05em;
+
+  /* Rounded */
+  --radius-sm: 0.125rem;
+  --radius-DEFAULT: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-full: 9999px;
+
+  /* Spacing */
+  --spacing-stack-sm: 8px;
+  --spacing-stack-md: 16px;
+  --spacing-stack-lg: 32px;
+  --spacing-gutter: 24px;
+  --spacing-sidebar-width: 280px;
+  --spacing-container-max: 1440px;
+  --spacing-margin-mobile: 16px;
+
+  /* shadow */
+  --shadow-button: 0px 2px 4px -2px #0000001a, 0px 4px 6px -1px #0000001a;
+}
+
+/* Accessible focus outlines and reduced motion */
+:root:focus-within {
+  outline: none;
+}
+
+:root {
+  scroll-behavior: smooth;
+}
+
+/* Accessible keyboard focus without the oversized yellow glow that made
+   cards/dialogs look permanently active. Controls can still provide their own
+   subtle border/ring treatment. */
+.focus-visible:focus,
+*:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-primary, #8f740d) 72%, transparent);
+  outline-offset: 1px;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+textarea:focus,
+select:focus {
+  border-color: var(--color-primary);
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Responsive token adjustments */
+@media (max-width: 375px) {
+  :root {
+    --spacing-sidebar-width: 200px;
+    --spacing-gutter: 12px;
+    --spacing-margin-mobile: 12px;
+  }
+}
+@media (min-width: 768px) {
+  :root {
+    --spacing-sidebar-width: 232px;
+    --spacing-gutter: 24px;
+  }
+}
+@media (min-width: 1440px) {
+  :root {
+    --spacing-container-max: 1600px;
+  }
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  background-color: #111827;
+  color: #f5f3ef;
+  --color-surface: #111827;
+  --color-surface-dim: #0f172a;
+  --color-surface-bright: #1f2937;
+  --color-surface-container-lowest: #111827;
+  --color-surface-container-low: #1f2937;
+  --color-surface-container: #273449;
+  --color-surface-container-high: #32435b;
+  --color-surface-container-highest: #3f5068;
+  --color-on-surface: #f5f3ef;
+  --color-on-surface-variant: #d1c6ac;
+  --color-surface-variant: #32435b;
+  --color-background: #111827;
+  --color-on-background: #f5f3ef;
+  --color-outline: #a59574;
+  --color-outline-variant: #7a6a48;
+}
+
+html[data-theme="dark"] body {
+  background-color: #111827;
+  color: #f5f3ef;
+}
+
+html[data-theme="dark"] .bg-white,
+html[data-theme="dark"] .bg-\[\#FBFAF6\],
+html[data-theme="dark"] .bg-\[\#FFFCF3\],
+html[data-theme="dark"] .bg-\[\#F9F9F9\],
+html[data-theme="dark"] .bg-\[\#F4F3F3\],
+html[data-theme="dark"] .bg-\[\#F7F4EA\],
+html[data-theme="dark"] .bg-\[\#F8F7F2\] {
+  background-color: #1f2937 !important;
+}
+
+html[data-theme="dark"] .text-\[\#111827\],
+html[data-theme="dark"] .text-\[\#1A1C1C\],
+html[data-theme="dark"] .text-\[\#4C5365\],
+html[data-theme="dark"] .text-\[\#4C4736\],
+html[data-theme="dark"] .text-\[\#514A38\],
+html[data-theme="dark"] .text-\[\#403919\],
+html[data-theme="dark"] .text-\[\#776E56\],
+html[data-theme="dark"] .text-\[\#8A8067\] {
+  color: #f5f3ef !important;
+}
+
+html[data-theme="dark"] .border-\[\#EEE9DB\],
+html[data-theme="dark"] .border-\[\#E8DFC5\],
+html[data-theme="dark"] .border-\[\#EEEEEE\],
+html[data-theme="dark"] .border-\[\#F4F3F3\],
+html[data-theme="dark"] .border-\[\#F4F1E8\],
+html[data-theme="dark"] .border-\[\#CEC6B0\]\/40,
+html[data-theme="dark"] .border-\[\#CEC6B0\]\/60 {
+  border-color: #5a5039 !important;
+}
+
+html[data-theme="dark"] .text-\[\#8A8067\] {
+  color: #cbbf9e !important;
+}
+
+html[data-theme="dark"] .text-\[\#A43B35\] {
+  color: #f5a7a2 !important;
+}
+
+html[data-theme="dark"] .bg-\[\#FFF1EF\] {
+  background-color: #3b1f1e !important;
+}
+
+html[data-theme="dark"] .bg-\[\#F9F9F9\]\/50,
+html[data-theme="dark"] .bg-\[\#F1D442\]\/10,
+html[data-theme="dark"] .bg-\[\#F1D442\]\/20,
+html[data-theme="dark"] .bg-\[\#F5E29F\]\/20 {
+  background-color: #2a3447 !important;
+}
+
+html[data-theme="dark"] .text-\[\#756F60\],
+html[data-theme="dark"] .text-\[\#68604E\],
+html[data-theme="dark"] .text-\[\#655D48\] {
+  color: #cbbf9e !important;
+}
+
+/* --------------------------------------------------------------------------
+   MailTracko dark theme — semantic contrast layer
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] {
+  --mt-dark-page: #0b1220;
+  --mt-dark-sidebar: #0f172a;
+  --mt-dark-surface: #111c2f;
+  --mt-dark-surface-raised: #172338;
+  --mt-dark-surface-soft: #1e2d45;
+  --mt-dark-border: #334155;
+  --mt-dark-border-strong: #475569;
+  --mt-dark-text: #f8fafc;
+  --mt-dark-text-secondary: #cbd5e1;
+  --mt-dark-text-muted: #94a3b8;
+  --mt-dark-accent: #f5cf3d;
+  --mt-dark-accent-strong: #e4ba22;
+}
+
+html[data-theme="dark"] body,
+html[data-theme="dark"] #root {
+  background: var(--mt-dark-page) !important;
+  color: var(--mt-dark-text) !important;
+}
+
+/* Light surfaces used across legacy components. */
+html[data-theme="dark"] [class~="bg-white"],
+html[data-theme="dark"] [class~="bg-white/95"],
+html[data-theme="dark"] [class~="bg-[#FBFAF6]"],
+html[data-theme="dark"] [class~="bg-[#F9F9F9]"],
+html[data-theme="dark"] [class~="bg-[#FAFAF8]"],
+html[data-theme="dark"] [class~="bg-[#F4F3F3]"],
+html[data-theme="dark"] [class~="bg-[#FFFCF3]"],
+html[data-theme="dark"] [class~="bg-[#FFFDF8]"],
+html[data-theme="dark"] [class~="bg-[#FFFCF5]"],
+html[data-theme="dark"] [class~="bg-[#FCFBF7]"],
+html[data-theme="dark"] [class~="bg-[#F8F7F2]"],
+html[data-theme="dark"] [class~="bg-[#F8F5EC]"],
+html[data-theme="dark"] [class~="bg-[#F8F4E9]"],
+html[data-theme="dark"] [class~="bg-[#F7F4EA]"],
+html[data-theme="dark"] [class~="bg-[#F7F4E8]"],
+html[data-theme="dark"] [class~="bg-[#F6F2E7]"],
+html[data-theme="dark"] [class~="bg-[#F5F2EA]"],
+html[data-theme="dark"] [class~="bg-[#F3F0E8]"],
+html[data-theme="dark"] [class~="bg-[#F2EEE4]"],
+html[data-theme="dark"] [class~="bg-[#F1EDE3]"],
+html[data-theme="dark"] [class~="bg-[#F0ECE2]"] {
+  background-color: var(--mt-dark-surface) !important;
+}
+
+/* Slightly elevated/alternate cards and table headers. */
+html[data-theme="dark"] [class~="bg-[#EEEEEE]"],
+html[data-theme="dark"] [class~="bg-[#F4F1E8]"],
+html[data-theme="dark"] [class~="bg-[#F3EFE5]"],
+html[data-theme="dark"] [class~="bg-[#F2ECD9]"],
+html[data-theme="dark"] [class~="bg-[#F8F0D7]"],
+html[data-theme="dark"] [class~="bg-[#F8F1DD]"],
+html[data-theme="dark"] [class~="bg-[#F5ECD2]"],
+html[data-theme="dark"] [class~="bg-[#FFFBEE]"],
+html[data-theme="dark"] [class~="bg-[#F7F0DA]"] {
+  background-color: var(--mt-dark-surface-raised) !important;
+}
+
+/* Brand-tinted chips should remain visibly branded without muddy brown text. */
+html[data-theme="dark"] [class~="bg-[#F5E29F]/20"],
+html[data-theme="dark"] [class~="bg-[#F5E29F]/40"],
+html[data-theme="dark"] [class~="bg-[#F5E29F]/50"],
+html[data-theme="dark"] [class~="bg-[#F1D442]/10"],
+html[data-theme="dark"] [class~="bg-[#F1D442]/20"],
+html[data-theme="dark"] [class~="bg-[#F1D442]/40"],
+html[data-theme="dark"] [class~="bg-[#F4EACB]"] {
+  background-color: #332d13 !important;
+}
+
+/* Primary text: all near-black/brown legacy values become readable white. */
+html[data-theme="dark"] [class~="text-[#171711]"],
+html[data-theme="dark"] [class~="text-[#171A22]"],
+html[data-theme="dark"] [class~="text-[#1A1C1C]"],
+html[data-theme="dark"] [class~="text-[#111827]"],
+html[data-theme="dark"] [class~="text-[#222731]"],
+html[data-theme="dark"] [class~="text-[#282D37]"],
+html[data-theme="dark"] [class~="text-[#292D36]"],
+html[data-theme="dark"] [class~="text-[#302C24]"],
+html[data-theme="dark"] [class~="text-[#3E4350]"],
+html[data-theme="dark"] [class~="text-[#403919]"],
+html[data-theme="dark"] [class~="text-[#403A2E]"],
+html[data-theme="dark"] [class~="text-[#4B4738]"] {
+  color: var(--mt-dark-text) !important;
+}
+
+/* Secondary/muted copy. */
+html[data-theme="dark"] [class~="text-[#4C4736]"],
+html[data-theme="dark"] [class~="text-[#4C5365]"],
+html[data-theme="dark"] [class~="text-[#514A38]"],
+html[data-theme="dark"] [class~="text-[#554F41]"],
+html[data-theme="dark"] [class~="text-[#5E6471]"],
+html[data-theme="dark"] [class~="text-[#5F6470]"],
+html[data-theme="dark"] [class~="text-[#625D4F]"],
+html[data-theme="dark"] [class~="text-[#655D48]"],
+html[data-theme="dark"] [class~="text-[#68604E]"],
+html[data-theme="dark"] [class~="text-[#696253]"],
+html[data-theme="dark"] [class~="text-[#6F6857]"],
+html[data-theme="dark"] [class~="text-[#746D5B]"],
+html[data-theme="dark"] [class~="text-[#756E5C]"],
+html[data-theme="dark"] [class~="text-[#756F60]"],
+html[data-theme="dark"] [class~="text-[#776E56]"],
+html[data-theme="dark"] [class~="text-[#77705E]"],
+html[data-theme="dark"] [class~="text-[#817966]"],
+html[data-theme="dark"] [class~="text-[#8A8067]"],
+html[data-theme="dark"] [class~="text-[#8B8371]"],
+html[data-theme="dark"] [class~="text-[#9A9487]"],
+html[data-theme="dark"] [class~="text-[#B2A98F]"] {
+  color: var(--mt-dark-text-secondary) !important;
+}
+
+/* Brand text remains an accent, but bright enough for dark surfaces. */
+html[data-theme="dark"] [class~="text-[#8F740D]"],
+html[data-theme="dark"] [class~="text-[#806708]"],
+html[data-theme="dark"] [class~="text-[#7A6208]"],
+html[data-theme="dark"] [class~="text-[#735E10]"],
+html[data-theme="dark"] [class~="text-[#6E5E00]"],
+html[data-theme="dark"] [class~="text-[#6A5B00]"],
+html[data-theme="dark"] [class~="text-[#5F4D06]"] {
+  color: var(--mt-dark-accent) !important;
+}
+
+/* Neutral borders. */
+html[data-theme="dark"] [class~="border-[#CEC6B0]"],
+html[data-theme="dark"] [class~="border-[#CEC6B0]/30"],
+html[data-theme="dark"] [class~="border-[#CEC6B0]/40"],
+html[data-theme="dark"] [class~="border-[#CEC6B0]/50"],
+html[data-theme="dark"] [class~="border-[#CEC6B0]/60"],
+html[data-theme="dark"] [class~="border-[#DCD3BC]"],
+html[data-theme="dark"] [class~="border-[#DED7C7]"],
+html[data-theme="dark"] [class~="border-[#E5DDCA]"],
+html[data-theme="dark"] [class~="border-[#E6DEC7]"],
+html[data-theme="dark"] [class~="border-[#E8DFC5]"],
+html[data-theme="dark"] [class~="border-[#E8E1D0]"],
+html[data-theme="dark"] [class~="border-[#EEE8DA]"],
+html[data-theme="dark"] [class~="border-[#EEE9DB]"],
+html[data-theme="dark"] [class~="border-[#EEE9DC]"],
+html[data-theme="dark"] [class~="border-[#EEEEEE]"],
+html[data-theme="dark"] [class~="border-[#F4F1E8]"],
+html[data-theme="dark"] [class~="border-[#F4F3F3]"] {
+  border-color: var(--mt-dark-border) !important;
+}
+
+/* Form controls must not remain white inside dark cards. */
+html[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select {
+  background-color: #0f1a2c !important;
+  border-color: var(--mt-dark-border-strong) !important;
+  color: var(--mt-dark-text) !important;
+}
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: var(--mt-dark-text-muted) !important;
+  opacity: 1;
+}
+html[data-theme="dark"] select option {
+  background-color: #0f1a2c;
+  color: var(--mt-dark-text);
+}
+
+/* Common hover surfaces. */
+html[data-theme="dark"] [class~="hover:bg-[#F4F3F3]"]:hover,
+html[data-theme="dark"] [class~="hover:bg-[#F8F7F2]"]:hover,
+html[data-theme="dark"] [class~="hover:bg-[#F8F4E9]"]:hover,
+html[data-theme="dark"] [class~="hover:bg-[#F7F4EA]"]:hover,
+html[data-theme="dark"] [class~="hover:bg-[#F6F2E7]"]:hover,
+html[data-theme="dark"] [class~="hover:bg-[#FAF7EE]"]:hover,
+html[data-theme="dark"] [class~="hover:bg-[#EEEEEE]"]:hover {
+  background-color: var(--mt-dark-surface-soft) !important;
+}
+html[data-theme="dark"] [class~="hover:text-[#111827]"]:hover,
+html[data-theme="dark"] [class~="hover:text-[#1A1C1C]"]:hover {
+  color: var(--mt-dark-text) !important;
+}
+html[data-theme="dark"] [class~="hover:text-[#5F4D06]"]:hover,
+html[data-theme="dark"] [class~="hover:text-[#6E5E00]"]:hover,
+html[data-theme="dark"] [class~="hover:text-[#8F740D]"]:hover {
+  color: #ffe06a !important;
+}
+
+/* Header separators, shadows and browser-native UI. */
+html[data-theme="dark"] [class~="bg-[#E9E3D4]"] { background-color: var(--mt-dark-border) !important; }
+html[data-theme="dark"] [class~="ring-white"] { --tw-ring-color: var(--mt-dark-surface) !important; }
+html[data-theme="dark"] .shadow-sm,
+html[data-theme="dark"] .shadow-lg,
+html[data-theme="dark"] .shadow-xl,
+html[data-theme="dark"] .shadow-2xl { box-shadow: 0 12px 30px rgba(0,0,0,.22) !important; }
+
+/* Semantic status surfaces and scrollbars in dark mode. */
+html[data-theme="dark"] [class~="bg-emerald-50"],
+html[data-theme="dark"] [class~="bg-emerald-100"] { background-color: #0d2b24 !important; }
+html[data-theme="dark"] [class~="text-emerald-600"],
+html[data-theme="dark"] [class~="text-emerald-700"],
+html[data-theme="dark"] [class~="text-emerald-800"],
+html[data-theme="dark"] [class~="text-emerald-900"] { color: #86efac !important; }
+html[data-theme="dark"] [class~="border-emerald-200"] { border-color: #166534 !important; }
+
+html[data-theme="dark"] [class~="bg-red-50"],
+html[data-theme="dark"] [class~="bg-red-100"] { background-color: #341719 !important; }
+html[data-theme="dark"] [class~="text-red-500"],
+html[data-theme="dark"] [class~="text-red-600"],
+html[data-theme="dark"] [class~="text-red-700"],
+html[data-theme="dark"] [class~="text-red-800"],
+html[data-theme="dark"] [class~="text-red-900"],
+html[data-theme="dark"] [class~="text-red-950"] { color: #fca5a5 !important; }
+html[data-theme="dark"] [class~="border-red-200"] { border-color: #7f1d1d !important; }
+
+html[data-theme="dark"] [class~="bg-amber-50"],
+html[data-theme="dark"] [class~="bg-amber-100"] { background-color: #332709 !important; }
+html[data-theme="dark"] [class~="text-amber-700"],
+html[data-theme="dark"] [class~="text-amber-800"],
+html[data-theme="dark"] [class~="text-amber-900"] { color: #fde68a !important; }
+html[data-theme="dark"] [class~="border-amber-200"] { border-color: #854d0e !important; }
+
+html[data-theme="dark"],
+html[data-theme="dark"] * {
+  scrollbar-color: var(--mt-dark-border-strong) var(--mt-dark-page);
+}
+html[data-theme="dark"] ::-webkit-scrollbar { width: 10px; height: 10px; }
+html[data-theme="dark"] ::-webkit-scrollbar-track { background: var(--mt-dark-page); }
+html[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--mt-dark-border-strong);
+  border: 2px solid var(--mt-dark-page);
+  border-radius: 999px;
+}
+html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+
+/* QA #17: semantic Tailwind neutral utilities used by newer shared workspaces. */
+html[data-theme="dark"] [class~="bg-stone-50"] { background-color: var(--mt-dark-surface-raised) !important; }
+html[data-theme="dark"] [class~="bg-stone-100"] { background-color: var(--mt-dark-surface-soft) !important; }
+html[data-theme="dark"] [class~="bg-stone-200"] { background-color: #2b3a50 !important; }
+html[data-theme="dark"] [class~="text-stone-900"],
+html[data-theme="dark"] [class~="text-stone-800"],
+html[data-theme="dark"] [class~="text-stone-700"] { color: var(--mt-dark-text) !important; }
+html[data-theme="dark"] [class~="text-stone-600"] { color: var(--mt-dark-text-secondary) !important; }
+html[data-theme="dark"] [class~="text-stone-500"],
+html[data-theme="dark"] [class~="text-stone-400"] { color: var(--mt-dark-text-muted) !important; }
+html[data-theme="dark"] [class~="border-stone-200"],
+html[data-theme="dark"] [class~="border-stone-300"] { border-color: var(--mt-dark-border) !important; }
+html[data-theme="dark"] [class~="border-stone-400"] { border-color: var(--mt-dark-border-strong) !important; }
+html[data-theme="dark"] [class~="hover:bg-stone-50"]:hover,
+html[data-theme="dark"] [class~="hover:bg-stone-100"]:hover,
+html[data-theme="dark"] [class~="hover:bg-white"]:hover { background-color: var(--mt-dark-surface-soft) !important; }
+html[data-theme="dark"] [class~="hover:text-stone-900"]:hover { color: var(--mt-dark-text) !important; }
+html[data-theme="dark"] button:disabled,
+html[data-theme="dark"] input:disabled,
+html[data-theme="dark"] textarea:disabled {
+  color: var(--mt-dark-text-muted);
+}
+
+/* Support hero is intentionally warm in light mode and a readable branded surface in dark mode. */
+html[data-theme="dark"] .mt-support-hero {
+  background: linear-gradient(135deg, #172338 0%, #111c2f 100%) !important;
+  border-color: var(--mt-dark-border) !important;
+}
+
+/* Workspace appearance uses one backend-aligned contract: light or dark. */
+
+
+
+/* Compound controls may opt into one shared focus boundary. Do not apply
+   :has(input:focus) to every bordered label/div: that caused entire modals,
+   cards and settings panels to glow whenever a nested field received focus. */
+.mt-field-shell:has(> input:focus),
+.mt-field-shell:has(> textarea:focus),
+.mt-field-shell:has(> select:focus) {
+  border-color: var(--color-primary, #8f740d) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary, #8f740d) 20%, transparent);
+}
+
+/* CSV preview gets explicit theme surfaces so imported values never disappear in dark mode. */
+html[data-theme="dark"] .mt-csv-preview,
+html[data-theme="dark"] .mt-csv-preview table,
+html[data-theme="dark"] .mt-csv-preview tbody,
+html[data-theme="dark"] .mt-csv-preview tr,
+html[data-theme="dark"] .mt-csv-preview td {
+  color: var(--mt-dark-text) !important;
+}
+html[data-theme="dark"] .mt-csv-preview table,
+html[data-theme="dark"] .mt-csv-preview tbody tr:nth-child(odd) {
+  background-color: var(--mt-dark-surface) !important;
+}
+html[data-theme="dark"] .mt-csv-preview thead,
+html[data-theme="dark"] .mt-csv-preview tbody tr:nth-child(even) {
+  background-color: var(--mt-dark-surface-raised) !important;
+}
+
+
+/* --------------------------------------------------------------------------
+   Dark-mode legacy palette completion
+   --------------------------------------------------------------------------
+   Older feature screens use literal Tailwind colors rather than semantic
+   tokens. Keep those screens readable until all feature CSS is migrated.
+*/
+html[data-theme="dark"] [class~="bg-[#FFFEFB]"],
+html[data-theme="dark"] [class~="bg-[#FFF8E3]"],
+html[data-theme="dark"] [class~="bg-[#FFF9E5]"],
+html[data-theme="dark"] [class~="bg-[#FFFCF2]"],
+html[data-theme="dark"] [class~="bg-[#F7F4ED]"],
+html[data-theme="dark"] [class~="bg-[#F4F0E6]"],
+html[data-theme="dark"] [class~="bg-[#F1ECDF]"],
+html[data-theme="dark"] [class~="bg-[#F0EADC]"],
+html[data-theme="dark"] [class~="bg-[#F5F0E1]"],
+html[data-theme="dark"] [class~="bg-[#ECE8DE]"],
+html[data-theme="dark"] [class~="bg-[#FCFAF4]"],
+html[data-theme="dark"] [class~="bg-[#F3F3F3]"],
+html[data-theme="dark"] [class~="bg-[#F4F4F4]"],
+html[data-theme="dark"] [class~="bg-[#F1F1F1]"] {
+  background-color: var(--mt-dark-surface) !important;
+}
+
+html[data-theme="dark"] [class~="bg-[#FFF4DB]"],
+html[data-theme="dark"] [class~="bg-[#FFF7E3]"],
+html[data-theme="dark"] [class~="bg-[#F8EDC5]"],
+html[data-theme="dark"] [class~="bg-[#F7F2E2]"],
+html[data-theme="dark"] [class~="bg-[#ECE5D5]"],
+html[data-theme="dark"] [class~="bg-[#DED8CA]"],
+html[data-theme="dark"] [class~="bg-[#FCF8EC]"],
+html[data-theme="dark"] [class~="bg-[#F3EDDE]"],
+html[data-theme="dark"] [class~="bg-[#F5F1E6]"],
+html[data-theme="dark"] [class~="hover:bg-[#FCF8EC]"]:hover,
+html[data-theme="dark"] [class~="hover:bg-[#F3EDDE]"]:hover,
+html[data-theme="dark"] [class~="hover:bg-[#F5F1E6]"]:hover,
+html[data-theme="dark"] [class~="hover:bg-[#FFF8DD]"]:hover,
+html[data-theme="dark"] [class~="hover:bg-[#F8EDC5]"]:hover {
+  background-color: var(--mt-dark-surface-raised) !important;
+}
+
+/* Arbitrary semantic alert tints. */
+html[data-theme="dark"] [class~="bg-[#FFF3F2]"],
+html[data-theme="dark"] [class~="bg-[#FFF0EF]"] { background-color: #341719 !important; }
+html[data-theme="dark"] [class~="bg-[#EAF7ED]"],
+html[data-theme="dark"] [class~="bg-[#F3FBF5]"],
+html[data-theme="dark"] [class~="bg-[#F1FBF4]"] { background-color: #0d2b24 !important; }
+html[data-theme="dark"] [class~="bg-[#EDF3FF]"] { background-color: #172554 !important; }
+
+/* Remaining dark/brown primary text used in template and settings screens. */
+html[data-theme="dark"] [class~="text-[#19202D]"],
+html[data-theme="dark"] [class~="text-[#1F2937]"],
+html[data-theme="dark"] [class~="text-[#252A34]"],
+html[data-theme="dark"] [class~="text-[#2F2A1F]"],
+html[data-theme="dark"] [class~="text-[#343945]"] {
+  color: var(--mt-dark-text) !important;
+}
+
+html[data-theme="dark"] [class~="text-[#4D5360]"],
+html[data-theme="dark"] [class~="text-[#4F493C]"],
+html[data-theme="dark"] [class~="text-[#514B3C]"],
+html[data-theme="dark"] [class~="text-[#544F43]"],
+html[data-theme="dark"] [class~="text-[#5A5241]"],
+html[data-theme="dark"] [class~="text-[#5E5230]"],
+html[data-theme="dark"] [class~="text-[#625A47]"],
+html[data-theme="dark"] [class~="text-[#665F4E]"],
+html[data-theme="dark"] [class~="text-[#686D78]"],
+html[data-theme="dark"] [class~="text-[#6C6658]"],
+html[data-theme="dark"] [class~="text-[#6D654F]"],
+html[data-theme="dark"] [class~="text-[#6E6757]"],
+html[data-theme="dark"] [class~="text-[#6E685A]"],
+html[data-theme="dark"] [class~="text-[#746D5C]"],
+html[data-theme="dark"] [class~="text-[#766D54]"],
+html[data-theme="dark"] [class~="text-[#797260]"],
+html[data-theme="dark"] [class~="text-[#7B7462]"],
+html[data-theme="dark"] [class~="text-[#7B7464]"],
+html[data-theme="dark"] [class~="text-[#88806D]"],
+html[data-theme="dark"] [class~="text-[#8A826F]"],
+html[data-theme="dark"] [class~="text-[#8D8572]"],
+html[data-theme="dark"] [class~="text-[#8D8676]"],
+html[data-theme="dark"] [class~="text-[#918A78]"],
+html[data-theme="dark"] [class~="text-[#938A74]"],
+html[data-theme="dark"] [class~="text-[#938B78]"],
+html[data-theme="dark"] [class~="text-[#968E79]"],
+html[data-theme="dark"] [class~="text-[#98907D]"],
+html[data-theme="dark"] [class~="text-[#99917D]"] {
+  color: var(--mt-dark-text-secondary) !important;
+}
+
+/* Legacy brand-brown text needs a bright accent on dark surfaces. */
+html[data-theme="dark"] [class~="text-[#594C05]"],
+html[data-theme="dark"] [class~="text-[#685817]"],
+html[data-theme="dark"] [class~="text-[#6E590A]"],
+html[data-theme="dark"] [class~="text-[#6F5A0B]"],
+html[data-theme="dark"] [class~="text-[#6F5C17]"],
+html[data-theme="dark"] [class~="text-[#705A0A]"],
+html[data-theme="dark"] [class~="text-[#725C0A]"],
+html[data-theme="dark"] [class~="text-[#79610A]"],
+html[data-theme="dark"] [class~="text-[#80680C]"],
+html[data-theme="dark"] [class~="text-[#8A6912]"],
+html[data-theme="dark"] [class~="text-[#976312]"] {
+  color: var(--mt-dark-accent) !important;
+}
+
+/* Remaining neutral borders from templates/settings. */
+html[data-theme="dark"] [class~="border-[#D9CFB8]"],
+html[data-theme="dark"] [class~="border-[#E6DFCF]"],
+html[data-theme="dark"] [class~="border-[#DAD4C7]"],
+html[data-theme="dark"] [class~="border-[#DEDEDE]"],
+html[data-theme="dark"] [class~="border-[#E4DDCD]"],
+html[data-theme="dark"] [class~="border-[#E0E0E0]"],
+html[data-theme="dark"] [class~="border-[#EEE7D7]"],
+html[data-theme="dark"] [class~="border-[#E0D8C7]"],
+html[data-theme="dark"] [class~="border-[#DDD5C3]"],
+html[data-theme="dark"] [class~="border-[#EEE8D9]"],
+html[data-theme="dark"] [class~="border-[#D8D8D8]"],
+html[data-theme="dark"] [class~="border-[#F0EBDF]"],
+html[data-theme="dark"] [class~="border-[#F1ECE1]"],
+html[data-theme="dark"] [class~="border-[#DED7C5]"] {
+  border-color: var(--mt-dark-border) !important;
+}
+
+/* Dark-mode focus indicators stay visible but deliberately do not glow. */
+html[data-theme="dark"] *:focus-visible {
+  outline-color: color-mix(in srgb, var(--mt-dark-accent) 62%, transparent);
+}
+html[data-theme="dark"] input:focus,
+html[data-theme="dark"] textarea:focus,
+html[data-theme="dark"] select:focus {
+  border-color: #8b7a4f !important;
+  box-shadow: 0 0 0 1px rgba(245, 207, 61, 0.14) !important;
+}
+
+/* Gradient/card variants used by the template gallery. Keeping the light-mode
+   cream gradient while converting its text to white caused unreadable cards. */
+html[data-theme="dark"] [class~="bg-white/90"],
+html[data-theme="dark"] [class~="bg-white/70"] {
+  background-color: color-mix(in srgb, var(--mt-dark-surface-raised) 94%, transparent) !important;
+}
+html[data-theme="dark"] [class~="from-[#FFFDF5]"],
+html[data-theme="dark"] [class~="from-[#FFF8DF]"] {
+  --tw-gradient-from: var(--mt-dark-surface-raised) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgb(23 35 56 / 0) var(--tw-gradient-to-position) !important;
+}
+html[data-theme="dark"] [class~="to-[#F2E8C8]"] {
+  --tw-gradient-to: var(--mt-dark-surface-soft) var(--tw-gradient-to-position) !important;
+}
+
+/* Final legacy contrast coverage for hard-coded status and neutral colors that
+   still appear in older feature modules. These values were readable on cream
+   surfaces but become too dark against the shared dark surfaces. */
+html[data-theme="dark"] [class~="text-[#3F371C]"],
+html[data-theme="dark"] [class~="text-[#615532]"],
+html[data-theme="dark"] [class~="text-[#705B22]"],
+html[data-theme="dark"] [class~="text-[#776C4B]"] {
+  color: var(--mt-dark-text) !important;
+}
+html[data-theme="dark"] [class~="text-[#9A9385]"],
+html[data-theme="dark"] [class~="text-[#C4BDAA]"],
+html[data-theme="dark"] [class~="text-[#CEC6B0]"],
+html[data-theme="dark"] [class~="disabled:text-[#9A9487]"]:disabled {
+  color: var(--mt-dark-text-muted) !important;
+}
+
+/* Hard-coded success/info/error colors keep semantic meaning and meet dark
+   contrast requirements instead of becoming nearly invisible. */
+html[data-theme="dark"] [class~="text-[#25643A]"],
+html[data-theme="dark"] [class~="text-[#26733D]"],
+html[data-theme="dark"] [class~="text-[#2D8A4A]"],
+html[data-theme="dark"] [class~="text-[#356345]"],
+html[data-theme="dark"] [class~="text-[#487456]"] {
+  color: #86efac !important;
+}
+html[data-theme="dark"] [class~="text-[#315EA8]"] {
+  color: #93c5fd !important;
+}
+html[data-theme="dark"] [class~="text-[#7E3030]"],
+html[data-theme="dark"] [class~="text-[#9B2C2C]"],
+html[data-theme="dark"] [class~="text-[#A43B35]"],
+html[data-theme="dark"] [class~="text-[#A63830]"],
+html[data-theme="dark"] [class~="text-[#B42318]"] {
+  color: #fca5a5 !important;
+}
+
+/* Neutral form/card borders found outside the newer shared primitives. */
+html[data-theme="dark"] [class~="border-[#D0C39B]"],
+html[data-theme="dark"] [class~="border-[#D7C98F]"],
+html[data-theme="dark"] [class~="border-[#D8C990]"],
+html[data-theme="dark"] [class~="border-[#DCCF9A]"],
+html[data-theme="dark"] [class~="border-[#E3D8B5]"],
+html[data-theme="dark"] [class~="border-[#E6DDBF]"],
+html[data-theme="dark"] [class~="border-[#EADCB2]"],
+html[data-theme="dark"] [class~="border-[#F0D9A6]"] {
+  border-color: var(--mt-dark-border) !important;
+}
+html[data-theme="dark"] [class~="border-[#CDE7D4]"],
+html[data-theme="dark"] [class~="border-[#CDE8D4]"],
+html[data-theme="dark"] [class~="border-[#D4E8D9]"] {
+  border-color: #166534 !important;
+}
+html[data-theme="dark"] [class~="border-[#C8D7F5]"] { border-color: #1d4ed8 !important; }
+html[data-theme="dark"] [class~="border-[#E7BDB9]"],
+html[data-theme="dark"] [class~="border-[#F0C8C5]"],
+html[data-theme="dark"] [class~="border-[#F4C6C2]"] {
+  border-color: #7f1d1d !important;
+}
+
+/* Semi-transparent warm fills previously responsible for bright yellow boxes
+   in dark mode. Keep a hint of brand color without a glow. */
+html[data-theme="dark"] [class~="bg-[#F1D442]/25"],
+html[data-theme="dark"] [class~="bg-[#F1D442]/30"],
+html[data-theme="dark"] [class~="bg-[#F5E29F]/15"],
+html[data-theme="dark"] [class~="bg-[#F5E29F]/30"],
+html[data-theme="dark"] [class~="bg-[#F5E29F]/60"],
+html[data-theme="dark"] [class~="bg-[#F2DF9C]"],
+html[data-theme="dark"] [class~="bg-[#F2DF9C]/40"] {
+  background-color: color-mix(in srgb, var(--mt-dark-accent) 10%, var(--mt-dark-surface-raised)) !important;
+}
+
+/* Explicit legacy focus utilities are kept to one thin ring globally. */
+html[data-theme="dark"] [class~="focus:ring-[#E9DFAE]"]:focus,
+html[data-theme="dark"] [class~="focus:ring-[#E9DFAE]/60"]:focus,
+html[data-theme="dark"] [class~="focus:ring-[#F1D442]/25"]:focus,
+html[data-theme="dark"] [class~="focus:ring-[#F1D442]/30"]:focus,
+html[data-theme="dark"] [class~="focus:ring-[#F1D442]/40"]:focus,
+html[data-theme="dark"] [class~="focus:ring-[#F1D442]/50"]:focus {
+  --tw-ring-color: rgba(245, 207, 61, 0.14) !important;
+}
+
+/* Legacy compound fields sometimes apply Tailwind focus-within:ring-2 directly
+   to the wrapper. In dark mode that reads as a large luminous box, so normalize
+   those wrappers to the same restrained one-pixel focus boundary. */
+html[data-theme="dark"] [class*="focus-within:ring-2"]:focus-within {
+  --tw-ring-color: rgba(245, 207, 61, 0.14) !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+  --tw-ring-shadow: 0 0 0 1px var(--tw-ring-color) !important;
+  box-shadow: var(--tw-ring-shadow) !important;
+}

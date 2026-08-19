@@ -1,0 +1,11 @@
+import { z } from "zod";
+
+export const LoginSchema = z.object({
+  email: z.string().email("Enter a valid email address"),
+  password: z
+    .string()
+    .min(8, "Must be at least 8 characters including a symbol")
+    .regex(/[^A-Za-z0-9]/, "Must be at least 8 characters including a symbol"),
+});
+
+export type LoginFormData = z.infer<typeof LoginSchema>;

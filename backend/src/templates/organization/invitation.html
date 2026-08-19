@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}You're invited — MailTracko{% endblock %}
+
+{% block content %}
+<div style="text-align:center;margin-bottom:28px;">
+    <h1 class="heading" style="font-size:35px;font-weight:800;color:#6c2bd9;letter-spacing:-0.02em;margin:0 0 8px 0;">
+        You're invited! 🎉
+    </h1>
+    <p class="subtitle" style="font-size:15px;color:#64748b;line-height:1.5;margin:0;">
+        Join your team on MailTracko and start collaborating.
+    </p>
+</div>
+
+<div class="card" style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:16px;padding:28px 32px;margin-bottom:28px;">
+    <h2 class="greeting" style="font-size:17px;font-weight:700;color:#1e293b;margin:0 0 12px 0;">
+        Hello <span class="greeting-name" style="color:#6c2bd9;">{{ invitee_name | default('there', boolean=True) | title }}</span>,
+    </h2>
+    <p class="body-text" style="font-size:14px;line-height:1.6;color:#475569;margin:0 0 24px 0;">
+        <strong style="color:#6c2bd9;">{{ organization_name | title }}</strong> has invited you to join their organization on MailTracko. Collaborate on email campaigns, manage contacts, and track deliverability together.
+    </p>
+
+    <div style="text-align:center;margin-bottom:24px;">
+        <a href="{{ invitation_link }}" class="cta-button btn-primary" style="display:inline-block;width:100%;max-width:320px;padding:14px 28px;background:#6c2bd9;color:#ffffff;text-decoration:none;border-radius:12px;font-size:15px;font-weight:700;text-align:center;box-sizing:border-box;box-shadow:0 4px 12px rgba(108,43,217,0.25);">
+            Accept Invitation &rarr;
+        </a>
+        {% if decline_link %}
+        <div style="margin-top:12px;">
+            <a href="{{ decline_link }}" style="font-size:13px;color:#ef4444;text-decoration:none;font-weight:500;">
+                Decline invitation
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <p class="small-text" style="font-size:12px;color:#64748b;text-align:center;margin:0;">
+        This invitation expires in 7 days. If you weren't expecting this invitation, you can ignore this email.
+    </p>
+</div>
+
+<div style="text-align:center;margin-bottom:28px;">
+    <p class="support-text" style="font-size:14px;color:#475569;margin:0 0 4px 0;">
+        If you have any questions, we're here to help.
+    </p>
+    <p class="support-signoff" style="font-size:14px;font-weight:600;color:#1e293b;margin:0;">
+        Happy collaborating! 🤝
+    </p>
+</div>
+
+<div class="divider" style="border-top:1px solid #e2e8f0;margin:0 0 28px 0;"></div>
+{% endblock %}

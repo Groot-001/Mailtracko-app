@@ -1,0 +1,49 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+frontend/.env
+backend/env/.env.*
+!backend/env/.example.env
+!backend/env/.example.production.env
+
+# JavaScript
+node_modules/
+frontend/node_modules/
+frontend/dist/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Python
+.venv/
+venv/
+backend/.venv/
+backend/venv/
+.pytest_cache/
+backend/.pytest_cache/
+**/__pycache__/
+*.py[cod]
+
+# Runtime logs and temporary files
+*.log
+*.stdout
+*.stderr
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+# One-off local backup and validation artifacts
+*.before-*
+*.candidate
+*.status
+*.out
+eslint*.json
+eslint*.txt
+*build_error*.txt
+*.tar
+*.tar.gz
+

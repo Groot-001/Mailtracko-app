@@ -1,0 +1,26 @@
+services:
+  db_test:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mailtracko_db_test
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    ports:
+      - "6070:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mailtracko_db_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_test_data:

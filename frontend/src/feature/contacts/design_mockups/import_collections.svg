@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <style>
+    .bg{fill:#FCFAF6}
+    .card{fill:#fff;stroke:#E6E2D8;stroke-width:1}
+    .btn-primary{fill:#8F740D}
+    .btn-outline{fill:#fff;stroke:#DAD7CF}
+    .muted{fill:#4C4736;font-family:Arial, sans-serif;font-size:13px}
+    .title{font-family:Arial,sans-serif;font-weight:700;font-size:28px;fill:#1A1C1C}
+    .list-title{font-family:Arial,sans-serif;font-weight:700;font-size:16px;fill:#1A1C1C}
+    .small{font-family:Arial,sans-serif;font-size:12px;fill:#666}
+  </style>
+  <rect class="bg" width="1200" height="700"/>
+
+  <g transform="translate(40,30)">
+    <text class="title">Contact Collections</text>
+    <rect x="760" y="-8" width="180" height="44" rx="8" class="btn-primary"/>
+    <text x="820" y="22" fill="#fff" font-family="Arial" font-size="13" font-weight="700">Create Collection</text>
+    <rect x="950" y="-8" width="180" height="44" rx="8" class="btn-outline"/>
+    <text x="1010" y="22" fill="#1A1C1C" font-family="Arial" font-size="13" font-weight="700">Import Contacts</text>
+
+    <!-- collection card -->
+    <g transform="translate(0,60)">
+      <rect class="card" width="340" height="140" rx="12"/>
+      <text x="20" y="36" class="list-title">Test List</text>
+      <text x="20" y="64" class="small">No description provided.</text>
+      <text x="20" y="108" class="muted">Created: Jul 31, 2026</text>
+      <rect x="220" y="84" width="80" height="28" rx="14" class="btn-outline"/>
+      <text x="240" y="102" fill="#1A1C1C" font-family="Arial" font-size="12" font-weight="700">Open List →</text>
+    </g>
+
+    <!-- list-picker modal (illustration) -->
+    <g transform="translate(420,60)">
+      <rect width="720" height="520" rx="12" fill="#fff" stroke="#E6E2D8"/>
+      <text x="24" y="38" class="list-title">Import Contacts — Choose target list</text>
+      <text x="24" y="62" class="small">Select a list to import into or create a new one.</text>
+
+      <rect x="24" y="90" width="660" height="40" rx="8" fill="#F9F9F9" stroke="#EDEBE6"/>
+      <text x="40" y="116" class="small">Search lists...</text>
+
+      <!-- list items -->
+      <g transform="translate(24,150)">
+        <rect width="660" height="56" rx="10" fill="#fff" stroke="#ECE9E0"/>
+        <text x="16" y="34" class="list-title">Newsletter Subscribers</text>
+      </g>
+
+      <g transform="translate(24,220)">
+        <rect width="660" height="56" rx="10" fill="#fff" stroke="#ECE9E0"/>
+        <text x="16" y="34" class="list-title">Leads — Website Signup</text>
+      </g>
+
+      <rect x="560" y="420" width="120" height="36" rx="8" class="btn-primary"/>
+      <text x="590" y="444" fill="#fff" font-family="Arial" font-size="13" font-weight="700">Create New</text>
+    </g>
+
+  </g>
+</svg>
