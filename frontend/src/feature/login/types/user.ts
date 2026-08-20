@@ -7,6 +7,7 @@ export interface User {
   created_at?: string;
   is_2fa_enabled?: boolean;
   two_factor_enabled?: boolean;
+  has_password?: boolean;
   phone?: string;
   country_code?: string;
   location?: string;

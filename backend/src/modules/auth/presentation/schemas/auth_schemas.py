@@ -111,6 +111,7 @@ class UserResponse(BaseSchema):
     location: str | None = None
     theme: DomainString
     is_2fa_enabled: bool = False
+    has_password: bool = True
     created_at: DomainString | None = None
 
     model_config = ConfigDict(from_attributes=True)
