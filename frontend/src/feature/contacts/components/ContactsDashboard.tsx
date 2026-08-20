@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api as axios } from '../../../shared/api/axios'
 import { AppSelect } from '../../../shared/components/AppSelect'
 import { ConfirmDialog } from '../../../shared/components/ConfirmDialog'
+import { DataPreviewTable } from '../../../shared/components/DataPreviewTable'
 import { Modal } from '../../../shared/components/Modal'
 import { PaginationControls } from '../../../shared/components/PaginationControls'
 import { useToast } from '../../../shared/hooks/useToast'
@@ -453,7 +454,7 @@ export const ContactsDashboard: React.FC = () => {
     if (!activeListUuid) return []
     const limit = 200
     let offset = 0
-    let total = 0
+    let total: number
     const items: Contact[] = []
     do {
       const page = await listContacts(activeListUuid, {
@@ -990,7 +991,7 @@ export const ContactsDashboard: React.FC = () => {
     await removeCollection(pendingDeleteCampaignWarning.list, true)
   }
 
-  const sheets = useMemo(() => csvRows.slice(0, 20), [csvRows])
+  const sheets = useMemo(() => csvRows.slice(0, 100), [csvRows])
 
   return (
     <>
@@ -1576,29 +1577,11 @@ export const ContactsDashboard: React.FC = () => {
                 ))}
               </div>
 
-            <div className="mt-4 overflow-auto rounded-2xl border border-stone-200">
-              <table className="min-w-full bg-white text-sm text-stone-700">
-                <thead className="bg-stone-50 text-left text-stone-900">
-                  <tr>
-                    {csvHeaders.map((header) => (
-                      <th key={header} className="whitespace-nowrap px-3 py-2">
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {sheets.map((row, index) => (
-                    <tr key={`${row.join('-')}-${index}`} className="odd:bg-white even:bg-stone-50">
-                      {row.map((value, valueIndex) => (
-                        <td key={`${value}-${valueIndex}`} className="whitespace-nowrap px-3 py-2">
-                          {value}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="mt-4">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#756F60]">
+                Imported data preview
+              </p>
+              <DataPreviewTable headers={csvHeaders} rows={sheets} />
             </div>
 
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">

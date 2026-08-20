@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { industrySectorStepSchema } from "../schema/onboardingSchema";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  industrySectorStepSchema,
+  type IndustrySectorStepFormData,
+  type IndustrySectorStepFormInput,
+} from "../schema/onboardingSchema";
 import {
   Search,
   Check,
@@ -96,18 +102,24 @@ export function Step4IndustrySector({
   onBack,
   currentStep = 4,
 }: Step4IndustrySectorProps) {
-  const [selected, setSelected] = useState<string>(initialValue || "");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [validationError, setValidationError] = useState<string | null>(null);
 
-  const handleContinue = () => {
-    const result = industrySectorStepSchema.safeParse({ industrySector: selected });
-    if (!result.success) {
-      setValidationError(result.error.issues[0]?.message ?? "Please select an industry sector");
-      return;
-    }
-    setValidationError(null);
-    onNext(result.data.industrySector);
+  const {
+    handleSubmit,
+    control,
+    setValue,
+    formState: { errors },
+  } = useForm<IndustrySectorStepFormInput, unknown, IndustrySectorStepFormData>({
+    resolver: zodResolver(industrySectorStepSchema),
+    defaultValues: {
+      industrySector: initialValue as IndustrySectorStepFormInput["industrySector"],
+    },
+  });
+
+  const selected = useWatch({ control, name: "industrySector" });
+
+  const onSubmit = (data: IndustrySectorStepFormData) => {
+    onNext(data.industrySector);
   };
 
   const filteredSectors = SECTOR_OPTIONS.filter(
@@ -176,7 +188,7 @@ export function Step4IndustrySector({
       </div>
 
       {/* Center Main Content Area */}
-      <div className="lg:col-span-7 bg-white border border-[#CEC6B0]/40 rounded-2xl p-6 sm:p-8 shadow-lg space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="lg:col-span-7 bg-white border border-[#CEC6B0]/40 rounded-2xl p-6 sm:p-8 shadow-lg space-y-6">
         <div className="space-y-2">
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1A1C1C] tracking-tight">
             Choose your industry sector
@@ -208,7 +220,7 @@ export function Step4IndustrySector({
               <button
                 key={sector.id}
                 type="button"
-                onClick={() => { setSelected(sector.id); setValidationError(null); }}
+                onClick={() => setValue("industrySector", sector.id as IndustrySectorStepFormInput["industrySector"], { shouldValidate: true })}
                 className={`relative border-2 rounded-2xl p-5 flex flex-col items-center justify-center text-center gap-3 transition-all cursor-pointer ${
                   isSelected
                     ? "bg-[#F5E29F]/15 border-[#8F740D] shadow-md ring-2 ring-[#8F740D]/20"
@@ -260,8 +272,8 @@ export function Step4IndustrySector({
           this anytime in settings.
         </p>
 
-        {validationError && (
-          <p role="alert" className="text-center text-sm font-medium text-red-600">{validationError}</p>
+        {errors.industrySector && (
+          <p role="alert" className="text-center text-sm font-medium text-red-600">{errors.industrySector.message}</p>
         )}
 
         {/* Action Buttons */}
@@ -275,15 +287,14 @@ export function Step4IndustrySector({
           </button>
 
           <button
-            type="button"
-            onClick={handleContinue}
+            type="submit"
             className="bg-[#8F740D] hover:bg-[#6E5E00] text-white font-bold text-xs sm:text-sm px-8 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-md cursor-pointer"
           >
             <span>Continue</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
-      </div>
+      </form>
 
       {/* Right Information Panel */}
       <div className="lg:col-span-3 bg-white border border-[#CEC6B0]/40 rounded-2xl p-5 space-y-5 shadow-sm">

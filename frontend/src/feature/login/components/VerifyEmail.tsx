@@ -12,6 +12,10 @@ import { ShieldCheck, ArrowLeft, Loader2 } from "lucide-react";
 import { resendVerificationEmail } from "../api/verifyEmailApi";
 import { getApiErrorMessage } from "../../../shared/utils/apiError";
 import { useToast } from "../../../shared/hooks/useToast";
+import { bootstrapApp } from "../../../shared/app/bootstrap";
+import { resolveInitialRoute } from "../../../shared/app/resolveInitialRoute";
+import { completePendingInvitation } from "../../../shared/auth/pendingInvitation";
+import { clearForcedLoginScreen } from "../../../shared/auth/forceLogin";
 
 export default function VerifyEmail() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -82,8 +86,31 @@ export default function VerifyEmail() {
 
   const onSubmit = (data: VerifyEmailFormData) => {
     mutate(data, {
-      onSuccess: () => {
+      onSuccess: async () => {
         setServerError(null);
+
+        // The user authenticated before verifying, so the session cookie is
+        // already set. After a successful verification, continue straight to
+        // the user's initial route (onboarding, dashboard, or a pending
+        // invitation) instead of bouncing them back to login. The success
+        // screen is only shown as a fallback when no session exists (e.g. a
+        // verification completed in a fresh browser).
+        clearForcedLoginScreen();
+
+        try {
+          await completePendingInvitation();
+        } catch {
+          // Keep the token in sessionStorage so the protected fallback page can retry.
+        }
+
+        const app = await bootstrapApp();
+
+        if (app) {
+          const initialRoute = resolveInitialRoute(app);
+          await navigate({ to: initialRoute });
+          return;
+        }
+
         setVerified(true);
       },
       onError: (err: unknown) => {

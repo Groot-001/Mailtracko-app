@@ -99,7 +99,7 @@ export function Step2Organization({
   // Auto-generate domain slug preview if user types org name
   const handleOrgNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    setValue("organizationName", val);
+    setValue("organizationName", val, { shouldValidate: true });
     if (!formValues.companyEmailDomain) {
       const slug = val.toLowerCase().replace(/[^a-z0-9]/g, "");
       if (slug) setValue("companyEmailDomain", `${slug}.com`);

@@ -1,7 +1,12 @@
-import { useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Check, Moon, Sun } from "lucide-react";
 import type { ThemeOption } from "../types/onboarding.types";
-import { themeStepSchema } from "../schema/onboardingSchema";
+import {
+  themeStepSchema,
+  type ThemeStepFormData,
+  type ThemeStepFormInput,
+} from "../schema/onboardingSchema";
 
 interface Step6ThemeSelectionProps {
   initialTheme: ThemeOption;
@@ -34,21 +39,26 @@ export function Step6ThemeSelection({
   onNext,
   onBack,
 }: Step6ThemeSelectionProps) {
-  const [selectedTheme, setSelectedTheme] = useState<ThemeOption>(initialTheme || "light");
-  const [error, setError] = useState<string | null>(null);
+  const {
+    handleSubmit,
+    control,
+    setValue,
+    formState: { errors },
+  } = useForm<ThemeStepFormInput, unknown, ThemeStepFormData>({
+    resolver: zodResolver(themeStepSchema),
+    defaultValues: {
+      theme: initialTheme,
+    },
+  });
 
-  const handleContinue = () => {
-    const result = themeStepSchema.safeParse({ theme: selectedTheme });
-    if (!result.success) {
-      setError(result.error.issues[0]?.message ?? "Please select a theme");
-      return;
-    }
-    setError(null);
-    onNext(result.data.theme);
+  const selectedTheme = useWatch({ control, name: "theme" });
+
+  const onSubmit = (data: ThemeStepFormData) => {
+    onNext(data.theme);
   };
 
   return (
-    <div className="w-full space-y-8 rounded-2xl border border-[#CEC6B0]/40 bg-white p-6 shadow-lg sm:p-10">
+    <form onSubmit={handleSubmit(onSubmit)} className="w-full space-y-8 rounded-2xl border border-[#CEC6B0]/40 bg-white p-6 shadow-lg sm:p-10">
       <div className="space-y-2">
         <div className="inline-block rounded-full border border-[#F2DF9C] bg-[#F5E29F]/50 px-3 py-1 text-xs font-semibold text-[#8F740D]">
           Step 6 of 7
@@ -72,10 +82,7 @@ export function Step6ThemeSelection({
               type="button"
               role="radio"
               aria-checked={selected}
-              onClick={() => {
-                setSelectedTheme(theme.id);
-                setError(null);
-              }}
+              onClick={() => setValue("theme", theme.id, { shouldValidate: true })}
               className={`relative overflow-hidden rounded-2xl border-2 p-5 text-left transition ${
                 selected
                   ? "border-[#8F740D] ring-2 ring-[#8F740D]/20"
@@ -115,7 +122,7 @@ export function Step6ThemeSelection({
         })}
       </div>
 
-      {error && <p role="alert" className="text-sm font-medium text-red-600">{error}</p>}
+      {errors.theme && <p role="alert" className="text-sm font-medium text-red-600">{errors.theme.message}</p>}
 
       <div className="flex items-center justify-between border-t border-[#EEEEEE] pt-6">
         <button
@@ -126,13 +133,12 @@ export function Step6ThemeSelection({
           Back
         </button>
         <button
-          type="button"
-          onClick={handleContinue}
+          type="submit"
           className="inline-flex items-center gap-2 rounded-xl bg-[#8F740D] px-8 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#6E5E00]"
         >
           Continue <ArrowRight className="h-4 w-4" />
         </button>
       </div>
-    </div>
+    </form>
   );
 }

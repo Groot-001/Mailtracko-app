@@ -72,8 +72,9 @@ class CreateOrganizationRequestSchema(BaseSchema):
         if not value:
             return None
         parsed = urlparse(value)
-        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-            raise ValueError("Enter a valid website URL starting with http:// or https://")
+        hostname = parsed.hostname
+        if parsed.scheme not in {"http", "https"} or not hostname or not _DOMAIN_RE.fullmatch(hostname):
+            raise ValueError("Enter a valid website URL")
         return value
 
     @field_validator("domain_email", mode="before")
@@ -130,11 +131,11 @@ class CreateOrganizationRequestSchema(BaseSchema):
 
         required = {
             "website_url": (self.website_url, "Website URL is required"),
-            "org_size": (self.org_size, "Organization size is required"),
-            "monthly_email_volume": (self.monthly_email_volume, "Monthly email volume is required"),
+            "org_size": (self.org_size, "Please select a valid organization size"),
+            "monthly_email_volume": (self.monthly_email_volume, "Please select a valid monthly email volume"),
             "domain_email": (self.domain_email, "Company email domain is required"),
-            "industry_sector": (self.industry_sector, "Industry sector is required"),
-            "source": (self.source, "Discovery source is required"),
+            "industry_sector": (self.industry_sector, "Please select a valid industry sector"),
+            "source": (self.source, "Please select how you heard about MailTracko"),
         }
         missing = {field: message for field, (value, message) in required.items() if value is None}
         if missing:
@@ -235,8 +236,9 @@ class EditOrganizationRequestSchema(BaseSchema):
         if not value:
             return None
         parsed = urlparse(value)
-        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-            raise ValueError("Enter a valid website URL starting with http:// or https://")
+        hostname = parsed.hostname
+        if parsed.scheme not in {"http", "https"} or not hostname or not _DOMAIN_RE.fullmatch(hostname):
+            raise ValueError("Enter a valid website URL")
         return value
 
     @field_validator("domain_email", mode="before")
