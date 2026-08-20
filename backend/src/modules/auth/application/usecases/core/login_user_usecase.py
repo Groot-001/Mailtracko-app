@@ -123,7 +123,10 @@ class LoginUserUseCase:
 
             user = await self.user_domain_service.get_user_by_email(email)
             if not user:
-                raise UnAuthorizedError(error="Invalid email or password")
+                raise UnAuthorizedError(
+                    error="No account found with this email address",
+                    errors={"email": "No account found with this email address"},
+                )
 
             if user.has_active_deletion_schedule():
                 user.cancel_scheduled_deletion()
@@ -134,16 +137,27 @@ class LoginUserUseCase:
 
             user_id = user.id
             if not user_id:
-                raise UnAuthorizedError(error="User not found")
+                raise UnAuthorizedError(
+                    error="No account found with this email address",
+                    errors={"email": "No account found with this email address"},
+                )
 
             account = await self.user_account_domain_service.get_user_account_by_user_id(
                 user_id=user_id, type="password"
             )
             if not account or not account.hashed_password:
-                raise UnAuthorizedError(error="Invalid email or password")
+                raise UnAuthorizedError(
+                    error="This account does not have a password set",
+                    errors={
+                        "password": "This account does not have a password. Sign in with Google or reset your password."
+                    },
+                )
 
             if not self.user_domain_service.verify_password(password, account.hashed_password):
-                raise UnAuthorizedError(error="Invalid email or password")
+                raise UnAuthorizedError(
+                    error="Incorrect password",
+                    errors={"password": "Incorrect password. Please try again."},
+                )
 
             totp_secret = await self.totp_repo.get_by(user_id=user_id)
             if totp_secret and totp_secret.enabled:

@@ -1,12 +1,15 @@
 # Environment and secrets
 .env
 .env.*
+.env.integration.example*
 !.env.example
 !.env.*.example
+.env.integration.example
 frontend/.env
 backend/env/.env.*
 !backend/env/.example.env
 !backend/env/.example.production.env
+.env.integration.example
 
 # JavaScript
 node_modules/

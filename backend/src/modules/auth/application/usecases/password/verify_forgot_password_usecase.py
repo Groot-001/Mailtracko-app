@@ -69,7 +69,10 @@ class VerifyForgotPasswordUseCase:
     async def reset_with_challenge(self, reset_challenge: str, new_password: str) -> dict:
         """Reset the password only after a valid server-side reset challenge."""
         try:
-            self.user_domain_service.validate_password(new_password)
+            try:
+                self.user_domain_service.validate_password(new_password)
+            except InvalidError as e:
+                raise InvalidError(error=e.error, errors={"new_password": e.error}) from e
             clean_challenge = reset_challenge.strip()
             if not clean_challenge:
                 raise InvalidError(error="Invalid or expired reset challenge")

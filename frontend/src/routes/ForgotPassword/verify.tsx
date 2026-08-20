@@ -7,7 +7,7 @@ import {
   resetForgotPassword,
   verifyForgotPasswordCode,
 } from "../../feature/login/api/forgotPasswordApi";
-import { getApiErrorMessage } from "../../shared/utils/apiError";
+import { getApiErrorMessage, getApiFieldErrors } from "../../shared/utils/apiError";
 import { useToast } from "../../shared/hooks/useToast";
 
 const RESET_CHALLENGE_KEY = "mailtracko_password_reset_challenge";
@@ -22,6 +22,16 @@ export const Route = createFileRoute("/ForgotPassword/verify")({
 });
 
 const PASSWORD_MIN_LENGTH = 12;
+const PASSWORD_MAX_LENGTH = 128;
+const validatePasswordStrength = (password: string): string | null => {
+  if (password.length < PASSWORD_MIN_LENGTH) return "Password must be at least 12 characters";
+  if (password.length > PASSWORD_MAX_LENGTH) return "Password cannot exceed 128 characters";
+  if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter";
+  if (!/[a-z]/.test(password)) return "Password must contain at least one lowercase letter";
+  if (!/\d/.test(password)) return "Password must contain at least one number";
+  if (!/[!@#$%^&*()_+\-=[\]{}|;':",./<>?`~]/.test(password)) return "Password must contain at least one special character";
+  return null;
+};
 
 function VerifyForgotPasswordPage() {
   const { email, step = "verify" } = Route.useSearch();
@@ -34,6 +44,8 @@ function VerifyForgotPasswordPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
@@ -135,12 +147,13 @@ function VerifyForgotPasswordPage() {
       setServerError("Your password reset session has expired. Verify a new security code.");
       return;
     }
-    if (newPassword.length < PASSWORD_MIN_LENGTH || !/[^A-Za-z0-9]/.test(newPassword)) {
-      setServerError("Password must be at least 12 characters and include a special character.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setServerError("Passwords do not match.");
+
+    const strengthError = validatePasswordStrength(newPassword);
+    setPasswordError(strengthError);
+    const matchError = newPassword !== confirmPassword ? "Passwords do not match." : null;
+    setConfirmError(matchError);
+    if (strengthError || matchError) {
+      setServerError(null);
       return;
     }
 
@@ -152,7 +165,13 @@ function VerifyForgotPasswordPage() {
       showToast("Password reset successfully. Please sign in.", "success");
       await navigate({ to: "/login" });
     } catch (error) {
-      setServerError(getApiErrorMessage(error, "Password could not be reset."));
+      const fieldErrors = getApiFieldErrors(error);
+      const newPasswordError = fieldErrors.new_password;
+      if (newPasswordError) {
+        setPasswordError(newPasswordError);
+      } else {
+        setServerError(getApiErrorMessage(error, "Password could not be reset."));
+      }
     } finally {
       setIsResetting(false);
     }
@@ -187,8 +206,28 @@ function VerifyForgotPasswordPage() {
         </div>
         {serverError ? <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">{serverError}</p> : null}
         <form onSubmit={resetPassword} className="space-y-4">
-          <PasswordField label="New Password" value={newPassword} onChange={setNewPassword} visible={showPassword} onToggle={() => setShowPassword((value) => !value)} />
-          <PasswordField label="Confirm Password" value={confirmPassword} onChange={setConfirmPassword} visible={showPassword} onToggle={() => setShowPassword((value) => !value)} />
+          <PasswordField
+            label="New Password"
+            value={newPassword}
+            onChange={(value) => {
+              setNewPassword(value);
+              setPasswordError(null);
+            }}
+            visible={showPassword}
+            onToggle={() => setShowPassword((value) => !value)}
+            error={passwordError}
+          />
+          <PasswordField
+            label="Confirm Password"
+            value={confirmPassword}
+            onChange={(value) => {
+              setConfirmPassword(value);
+              setConfirmError(null);
+            }}
+            visible={showPassword}
+            onToggle={() => setShowPassword((value) => !value)}
+            error={confirmError}
+          />
           <p className="text-[11px] leading-5 text-on-surface-variant">At least 12 characters with uppercase, lowercase, number, and special character.</p>
           <button type="submit" disabled={isResetting} className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-bold text-on-primary shadow-md transition hover:bg-[#6E5E00] disabled:opacity-60">
             {isResetting ? <><Loader2 className="h-4 w-4 animate-spin" /> Resetting...</> : "Reset Password"}
@@ -252,12 +291,14 @@ function PasswordField({
   onChange,
   visible,
   onToggle,
+  error,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   visible: boolean;
   onToggle: () => void;
+  error?: string | null;
 }) {
   return (
     <label className="block space-y-1.5">
@@ -269,12 +310,16 @@ function PasswordField({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           autoComplete="new-password"
+          maxLength={128}
           className="w-full rounded-lg border border-outline-variant/60 bg-surface-container-low py-2.5 pl-9 pr-10 text-sm text-on-surface outline-none transition focus:border-primary focus:bg-white"
         />
         <button type="button" onClick={onToggle} aria-label={visible ? "Hide password" : "Show password"} className="absolute right-3 text-on-surface-variant hover:text-primary">
           {visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
         </button>
       </div>
+      {error && (
+        <p className="text-xs text-red-600 font-medium">{error}</p>
+      )}
     </label>
   );
 }

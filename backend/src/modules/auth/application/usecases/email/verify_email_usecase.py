@@ -6,6 +6,7 @@ from src.modules.auth.domain.services.user_domain_service import UserDomainServi
 from src.modules.auth.domain.services.user_token_domain_service import UserTokenDomainService
 from src.core.config.settings import config
 from src.shared.exceptions.base_exceptions import DomainError, InvalidError, ServerError
+from src.shared.infrastructure.background_task_manager.task_manager import task_manager
 from src.shared.mediator.mediator import mediator
 
 
@@ -38,7 +39,8 @@ class VerifyEmailUseCase:
 
             user.add_event(EmailVerifiedEvent(user_id=user_id, email=user.email, full_name=user.full_name))
             for event in user.pull_events():
-                await mediator.publish(event, raise_on_error=True)
+                # The welcome email must never block or fail the verification request.
+                task_manager.add_task(mediator.publish(event, raise_on_error=False))
         except DomainError:
             raise
         except Exception as e:
@@ -79,7 +81,8 @@ class ResendVerificationUseCase:
                 )
             )
             for event in user.pull_events():
-                await mediator.publish(event, raise_on_error=True)
+                # Email delivery must never block or fail the resend request.
+                task_manager.add_task(mediator.publish(event, raise_on_error=False))
         except DomainError:
             raise
         except Exception as e:

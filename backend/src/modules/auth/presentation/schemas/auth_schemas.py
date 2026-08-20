@@ -7,9 +7,9 @@ from src.shared.schemas.base_schema import BaseSchema, DomainEmail, DomainString
 
 
 class RegisterRequest(BaseSchema):
-    full_name: NameString
+    full_name: NameString = Field(min_length=1)
     email: DomainEmail
-    password: DomainString
+    password: str = Field(min_length=1, max_length=128)
     invite_token: DomainString | None = None
 
 
