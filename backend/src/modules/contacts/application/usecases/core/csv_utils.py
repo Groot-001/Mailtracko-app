@@ -7,6 +7,20 @@ from src.shared.exceptions.base_exceptions import DomainError
 _EMAIL_RE = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
 
 
+# Canonical columns of the downloadable CSV import template. Google Sheet imports
+# must contain every one of these headers so the sheet is consistent with the template.
+CSV_TEMPLATE_FIELDS = [
+    "email",
+    "first_name",
+    "last_name",
+    "company",
+    "phone",
+    "city",
+    "state",
+    "country",
+]
+
+
 KNOWN_FIELDS = set()
 
 
