@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { AxiosProgressEvent } from 'axios'
-import type { ApiSuccessResponse, PaginatedResponse } from '../../../shared/types/api.types'
 import type { Contact, ContactList } from '../types/contacts.types'
 import { getApiErrorMessage } from '../../../shared/utils/apiError'
 import { Plus, Search, Trash2, Upload, Download, Users, Sparkles, ShieldCheck, Loader2, MoreHorizontal, Pencil } from 'lucide-react'
 import { Link, useSearch } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
-import { api as axios } from '../../../shared/api/axios'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useContacts } from '../hooks/useContacts'
+import { useContactLists } from '../hooks/useContactLists'
 import { AppSelect } from '../../../shared/components/AppSelect'
 import { ConfirmDialog } from '../../../shared/components/ConfirmDialog'
 import { DataPreviewTable } from '../../../shared/components/DataPreviewTable'
@@ -106,21 +106,44 @@ export const ContactsDashboard: React.FC = () => {
   const emailVerificationConfigured =
     platformAccess.data?.integrations?.email_verification_configured !== false
   const searchParams: { listUuid?: string } = useSearch({ from: '/_protected/contacts/' })
-  const [contacts, setContacts] = useState<Contact[]>([])
-  const [contactsTotal, setContactsTotal] = useState(0)
+  const queryClient = useQueryClient()
+
   const [contactsPage, setContactsPage] = useState(1)
   const [contactsLimit, setContactsLimit] = useState(10)
   const [pendingDeleteContact, setPendingDeleteContact] = useState<Contact | null>(null)
   const [deletingContact, setDeletingContact] = useState(false)
-  const [lists, setLists] = useState<ContactList[]>([])
-  const [listsLoading, setListsLoading] = useState(true)
-  const [listsError, setListsError] = useState<string | null>(null)
-  const [contactsLoading, setContactsLoading] = useState(false)
-  const [contactsError, setContactsError] = useState<string | null>(null)
+
   const [activeListUuid, setActiveListUuid] = useState<string | null>(searchParams.listUuid || null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [verificationFilter, setVerificationFilter] = useState('all')
+
+  const listsQuery = useContactLists(100, 0)
+  const lists = listsQuery.data?.items || []
+  const listsLoading = listsQuery.isLoading
+  const listsError = listsQuery.error ? getApiErrorMessage(listsQuery.error, 'Collections could not be loaded.') : null
+
+  useEffect(() => {
+    if (lists.length > 0) {
+      setActiveListUuid((current) => current || searchParams.listUuid || lists[0]?.uuid || null)
+    }
+  }, [lists, searchParams.listUuid])
+
+  const contactsQuery = useContacts(
+    activeListUuid || undefined,
+    {
+      limit: contactsLimit,
+      offset: (contactsPage - 1) * contactsLimit,
+      search: search.trim() || undefined,
+      status: statusFilter === 'all' ? undefined : (statusFilter as any),
+      verification_status: verificationFilter === 'all' ? undefined : (verificationFilter as any),
+    }
+  )
+
+  const contacts = contactsQuery.data?.items || []
+  const contactsTotal = contactsQuery.data?.total ?? 0
+  const contactsLoading = contactsQuery.isFetching
+  const contactsError = contactsQuery.error ? getApiErrorMessage(contactsQuery.error, 'Contacts could not be loaded for this collection.') : null
   const [selectedContactUuids, setSelectedContactUuids] = useState<string[]>([])
   const [selectedContactsByUuid, setSelectedContactsByUuid] = useState<Record<string, Contact>>({})
   const [selectingAllMatching, setSelectingAllMatching] = useState(false)
@@ -212,71 +235,7 @@ export const ContactsDashboard: React.FC = () => {
     }
   }, [collectionMenuUuid])
 
-  useEffect(() => {
-    let mounted = true
-    const fetchLists = async () => {
-      setListsLoading(true)
-      setListsError(null)
-      try {
-        const lRes = await axios.get<ApiSuccessResponse<PaginatedResponse<ContactList>>>('/contact-lists/')
-        if (!mounted) return
-        const listItems = lRes?.data?.data?.items || []
-        setLists(listItems)
-        setActiveListUuid((current) => current || searchParams.listUuid || listItems?.[0]?.uuid || null)
-      } catch (error: unknown) {
-        console.error(error)
-        if (!mounted) return
-        setListsError(getApiErrorMessage(error, 'Collections could not be loaded.'))
-      } finally {
-        if (mounted) setListsLoading(false)
-      }
-    }
 
-    fetchLists()
-    return () => {
-      mounted = false
-    }
-  }, [searchParams.listUuid])
-
-  useEffect(() => {
-    let mounted = true
-    const timer = window.setTimeout(async () => {
-      setContactsError(null)
-      if (!activeListUuid) {
-        setContacts([])
-        setContactsTotal(0)
-        setContactsLoading(false)
-        return
-      }
-
-      setContactsLoading(true)
-      try {
-        const resp = await axios.get<ApiSuccessResponse<PaginatedResponse<Contact>>>(`/contact-lists/${activeListUuid}/contacts`, {
-          params: {
-            limit: contactsLimit,
-            offset: (contactsPage - 1) * contactsLimit,
-            search: search.trim() || undefined,
-            status: statusFilter === 'all' ? undefined : statusFilter,
-            verification_status: verificationFilter === 'all' ? undefined : verificationFilter,
-          },
-        })
-        if (!mounted) return
-        setContacts(resp?.data?.data?.items || [])
-        setContactsTotal(resp?.data?.data?.total ?? 0)
-      } catch (error: unknown) {
-        console.error(error)
-        if (!mounted) return
-        setContactsError(getApiErrorMessage(error, 'Contacts could not be loaded for this collection.'))
-      } finally {
-        if (mounted) setContactsLoading(false)
-      }
-    }, 250)
-
-    return () => {
-      mounted = false
-      window.clearTimeout(timer)
-    }
-  }, [activeListUuid, contactsLimit, contactsPage, search, statusFilter, verificationFilter])
 
   const filteredContacts = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -311,86 +270,24 @@ export const ContactsDashboard: React.FC = () => {
   }, [activeList?.contact_count, contacts.length, lists])
 
   const refreshCollections = async () => {
-    const response = await axios.get<ApiSuccessResponse<PaginatedResponse<ContactList>>>('/contact-lists/', {
-      params: { limit: 200, offset: 0 },
-    })
-    const items = response?.data?.data?.items || []
-    setLists(items)
-    return items
+    await queryClient.invalidateQueries({ queryKey: ["contact-lists"] })
   }
 
-  const refreshContacts = async (listUuid = activeListUuid, page = contactsPage) => {
-    if (!listUuid) {
-      setContacts([])
-      setContactsTotal(0)
-      return
-    }
-    const response = await axios.get<ApiSuccessResponse<PaginatedResponse<Contact>>>(`/contact-lists/${listUuid}/contacts`, {
-      params: {
-        limit: contactsLimit,
-        offset: Math.max(0, page - 1) * contactsLimit,
-        search: search.trim() || undefined,
-        status: statusFilter === 'all' ? undefined : statusFilter,
-        verification_status: verificationFilter === 'all' ? undefined : verificationFilter,
-      },
-    })
-    setContacts(response?.data?.data?.items || [])
-    setContactsTotal(response?.data?.data?.total ?? 0)
+
+  const syncContactsWorkspace = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["contact-lists"] }),
+      queryClient.invalidateQueries({ queryKey: ["contacts"] }),
+    ])
   }
-
-  const syncContactsWorkspace = async (listUuid = activeListUuid, page = contactsPage) => {
-    await Promise.all([refreshCollections(), refreshContacts(listUuid, page)])
-  }
-
-  // Keep contact counts/data fresh without toggling the loading UI. The old
-  // refresh path re-entered the blocking loading state every 30 seconds, which
-  // caused the dark-mode screen flash reported by users.
-  useEffect(() => {
-    if (!activeListUuid) return
-
-    let cancelled = false
-    const silentRefresh = async () => {
-      if (document.visibilityState !== 'visible') return
-      try {
-        const [listsResponse, contactsResponse] = await Promise.all([
-          axios.get<ApiSuccessResponse<PaginatedResponse<ContactList>>>('/contact-lists/', {
-            params: { limit: 200, offset: 0 },
-          }),
-          axios.get<ApiSuccessResponse<PaginatedResponse<Contact>>>(`/contact-lists/${activeListUuid}/contacts`, {
-            params: {
-              limit: contactsLimit,
-              offset: Math.max(0, contactsPage - 1) * contactsLimit,
-              search: search.trim() || undefined,
-              status: statusFilter === 'all' ? undefined : statusFilter,
-              verification_status: verificationFilter === 'all' ? undefined : verificationFilter,
-            },
-          }),
-        ])
-        if (cancelled) return
-        setLists(listsResponse?.data?.data?.items || [])
-        setContacts(contactsResponse?.data?.data?.items || [])
-        setContactsTotal(contactsResponse?.data?.data?.total ?? 0)
-      } catch {
-        // Background refresh failures must not replace working data with an
-        // error screen. The next user action/manual request still reports errors.
-      }
-    }
-
-    const intervalId = window.setInterval(() => { void silentRefresh() }, 30_000)
-    return () => {
-      cancelled = true
-      window.clearInterval(intervalId)
-    }
-  }, [activeListUuid, contactsLimit, contactsPage, search, statusFilter, verificationFilter])
 
   const openCsvFilePicker = () => {
     setImportMenuOpen(false)
     csvFileInputRef.current?.click()
   }
 
-  const replaceContacts = (updated: Contact[]) => {
-    const byUuid = new Map<string, Contact>(updated.map((contact) => [contact.uuid, contact]))
-    setContacts((current) => current.map((contact) => byUuid.get(contact.uuid) || contact))
+  const replaceContacts = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["contacts"] })
   }
 
   const handleVerifyContact = async (contactUuid: string) => {
@@ -402,7 +299,7 @@ export const ContactsDashboard: React.FC = () => {
     setVerifyingContactUuid(contactUuid)
     try {
       const updated = await verifyContactEmail(activeListUuid, contactUuid)
-      replaceContacts([updated])
+      await replaceContacts()
       showToast(`Verification completed: ${updated.verification_status}`, 'success')
     } catch (error: unknown) {
       console.error(error)
@@ -556,15 +453,12 @@ export const ContactsDashboard: React.FC = () => {
       for (let index = 0; index < selectedContactUuids.length; index += 20) {
         await Promise.all(selectedContactUuids.slice(index, index + 20).map((uuid) => apiDeleteContact(activeListUuid, uuid)))
       }
-      const removed = new Set(selectedContactUuids)
-      setContacts((current) => current.filter((contact) => !removed.has(contact.uuid)))
-      setContactsTotal((current) => Math.max(0, current - selectedContactUuids.length))
       const count = selectedContactUuids.length
       clearContactSelection()
       setConfirmBulkDelete(false)
       const nextPage = contactsPage > 1 && contacts.length <= count ? contactsPage - 1 : contactsPage
       if (nextPage !== contactsPage) setContactsPage(nextPage)
-      await syncContactsWorkspace(activeListUuid, nextPage)
+      await syncContactsWorkspace()
       showToast(`${count} contacts deleted successfully.`, 'success')
     } catch (error: unknown) {
       showToast(getApiErrorMessage(error, 'Failed to delete selected contacts.'), 'error')
@@ -731,7 +625,7 @@ export const ContactsDashboard: React.FC = () => {
         clearContactSelection()
         setActiveListUuid(targetList)
       }
-      await syncContactsWorkspace(targetList, 1)
+      await syncContactsWorkspace()
 
       setCsvPreviewOpen(false)
       setCsvFile(null)
@@ -761,7 +655,7 @@ export const ContactsDashboard: React.FC = () => {
 
     const defaultName = 'My contacts'
     const list = await createContactList(defaultName, 'Auto-created collection')
-    setLists((prev) => [list, ...prev])
+    await refreshCollections()
     setSelectedContactUuids([])
     setActiveListUuid(list.uuid)
     return list.uuid
@@ -780,7 +674,7 @@ export const ContactsDashboard: React.FC = () => {
     if (!listUuid) {
       try {
         listUuid = await ensureContactListExists()
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Create collection failed', err)
         showToast('Please create a contact collection before adding contacts', 'info')
         return false
@@ -789,7 +683,7 @@ export const ContactsDashboard: React.FC = () => {
 
     try {
       setContactSubmitting(true)
-      const res = await apiCreateContact(listUuid, {
+      await apiCreateContact(listUuid, {
         email: trimmedEmail,
         metadata: trimmedName ? { name: trimmedName } : undefined,
       })
@@ -798,9 +692,8 @@ export const ContactsDashboard: React.FC = () => {
         setActiveListUuid(listUuid)
       }
       setContactsPage(1)
-      setContacts((prev) => [res, ...prev])
       setShowCreateForm(false)
-      await syncContactsWorkspace(listUuid, 1)
+      await syncContactsWorkspace()
       showToast('Contact created', 'success')
       return true
     } catch (err: unknown) {
@@ -819,12 +712,10 @@ export const ContactsDashboard: React.FC = () => {
     setDeletingContact(true)
     try {
       await apiDeleteContact(listUuid, pendingDeleteContact.uuid)
-      setContacts((prev) => prev.filter((contact) => contact.uuid !== pendingDeleteContact.uuid))
-      setContactsTotal((current) => Math.max(0, current - 1))
       setPendingDeleteContact(null)
       const nextPage = contactsPage > 1 && contacts.length <= 1 ? contactsPage - 1 : contactsPage
       if (nextPage !== contactsPage) setContactsPage(nextPage)
-      await syncContactsWorkspace(listUuid, nextPage)
+      await syncContactsWorkspace()
       showToast('Contact deleted successfully.', 'success')
     } catch (error: unknown) {
       showToast(getApiErrorMessage(error, 'Failed to delete contact.'), 'error')
@@ -850,7 +741,6 @@ export const ContactsDashboard: React.FC = () => {
 
     try {
       const list = await createContactList(trimmedName, newListDescription.trim() || undefined)
-      setLists((prev) => [list, ...prev])
       clearContactSelection()
       setActiveListUuid(list.uuid)
       setNewListName('')
@@ -900,11 +790,10 @@ export const ContactsDashboard: React.FC = () => {
     }
     setSavingList(true)
     try {
-      const updated = await updateContactList(editingList.uuid, {
+      await updateContactList(editingList.uuid, {
         name,
         description: editingListDescription.trim(),
       })
-      setLists((current) => current.map((list) => list.uuid === updated.uuid ? { ...list, ...updated } : list))
       setEditingList(null)
       await refreshCollections()
       showToast('Collection updated successfully.', 'success')
@@ -923,11 +812,8 @@ export const ContactsDashboard: React.FC = () => {
 
   const applyDeletedCollection = (deletingUuid: string) => {
     const remaining = lists.filter((list) => list.uuid !== deletingUuid)
-    setLists(remaining)
     if (activeListUuid === deletingUuid) {
       clearContactSelection()
-      setContacts([])
-      setContactsTotal(0)
       setContactsPage(1)
       setActiveListUuid(remaining[0]?.uuid || null)
     }
