@@ -163,6 +163,7 @@ class AuthContainer(containers.DeclarativeContainer):
     get_current_user_usecase = p.Factory(
         GetCurrentUserUseCase,
         user_domain_service=user_domain_service,
+        user_account_domain_service=user_account_domain_service,
         organization_member_domain_service=organization_member_domain_service,
         organization_domain_service=organization_domain_service,
         totp_repo=user_totp_secret_repository,

@@ -1,22 +1,47 @@
+import { useEffect, useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { forgotPasswordSchema, type forgotPasswordFormData } from "../schema/forgotPasswordSchema";
 import { useForgotPassword } from "../hooks/useForgotPassword";
+import {
+  getApiErrorMessage,
+  getApiFieldErrors,
+} from "../../../shared/utils/apiError";
 import { Mail, ArrowLeft, RefreshCw } from "lucide-react";
 
 export default function ForgotPassword() {
   const {
     register,
     handleSubmit,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<forgotPasswordFormData>({
     resolver: zodResolver(forgotPasswordSchema),
   });
 
-  const { mutate, isPending, isError } = useForgotPassword();
+  const { mutate, isPending, isError, error } = useForgotPassword();
+
+  const serverFieldErrors = useMemo(
+    () => (error ? getApiFieldErrors(error) : {}),
+    [error],
+  );
+
+  const hasServerFieldErrors = Object.keys(serverFieldErrors).length > 0;
+  const backendErrorMessage =
+    error && !hasServerFieldErrors
+      ? getApiErrorMessage(error, "Failed to send reset link. Please try again.")
+      : undefined;
+
+  useEffect(() => {
+    for (const [field, message] of Object.entries(serverFieldErrors)) {
+      setError(field as keyof forgotPasswordFormData, { type: "server", message });
+    }
+  }, [serverFieldErrors, setError]);
 
   const onSubmit: SubmitHandler<forgotPasswordFormData> = (data) => {
+    clearErrors();
     mutate(data);
   };
 
@@ -77,9 +102,9 @@ export default function ForgotPassword() {
               )}
             </div>
 
-            {isError && (
+            {isError && !hasServerFieldErrors && backendErrorMessage && (
               <p className="text-xs text-red-600 font-medium text-center">
-                Failed to send reset link. Please check your email or try again.
+                {backendErrorMessage}
               </p>
             )}
 

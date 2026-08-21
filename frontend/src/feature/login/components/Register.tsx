@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Eye, EyeOff, User, Mail, Lock, Loader2 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useCreateAccount } from "../hooks/useregister";
@@ -8,26 +8,45 @@ import { createAccountSchema, type createAccountFormData } from "../schema/regis
 import type { SubmitHandler } from "react-hook-form";
 import { Route as RegisterRoute } from "../../../routes/register";
 import { useInviteValidation } from "../hooks/useInviteValidation";
-import { getApiErrorMessage } from "../../../shared/utils/apiError";
+import {
+  getApiErrorMessage,
+  getApiFieldErrors,
+} from "../../../shared/utils/apiError";
 
 export default function CreateAccount() {
   const [showPassword, setShowPassword] = useState(false);
   const { mutate, isPending, isError, error } = useCreateAccount();
-  const backendErrorMessage = error ? getApiErrorMessage(error, '') : undefined
-
-  const { token } = RegisterRoute.useSearch();
-  const { data: inviteData, error: inviteError, isValidating } = useInviteValidation(token)
-  const orgName = inviteData?.organization_name ?? null
-  const validationError = inviteError ? getApiErrorMessage(inviteError, 'Invalid or expired invitation token. Please check the URL or ask the organization owner for a new invite.') : null
 
   const {
     register,
     handleSubmit,
     setValue,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<createAccountFormData>({
     resolver: zodResolver(createAccountSchema),
   });
+
+  const serverFieldErrors = useMemo(
+    () => (error ? getApiFieldErrors(error) : {}),
+    [error],
+  );
+
+  const hasServerFieldErrors = Object.keys(serverFieldErrors).length > 0;
+  const backendErrorMessage =
+    error && !hasServerFieldErrors ? getApiErrorMessage(error, "") : undefined;
+
+  useEffect(() => {
+    for (const [field, message] of Object.entries(serverFieldErrors)) {
+      setError(field as keyof createAccountFormData, { type: "server", message });
+    }
+  }, [serverFieldErrors, setError]);
+
+  const { token } = RegisterRoute.useSearch();
+  const { data: inviteData, error: inviteError, isValidating } = useInviteValidation(token)
+  const orgName = inviteData?.organization_name ?? null
+  const validationError = inviteError ? getApiErrorMessage(inviteError, 'Invalid or expired invitation token. Please check the URL or ask the organization owner for a new invite.') : null
 
   useEffect(() => {
     if (inviteData?.email) {
@@ -36,6 +55,7 @@ export default function CreateAccount() {
   }, [inviteData?.email, setValue])
 
   const onSubmit: SubmitHandler<createAccountFormData> = (data) => {
+    clearErrors();
     mutate({
       ...data,
       invite_token: token,
@@ -174,6 +194,7 @@ export default function CreateAccount() {
                   {...register("email")}
                   placeholder="john@company.com"
                   readOnly={!!token}
+                  maxLength={254}
                   className={`w-full border rounded-lg pl-9 pr-3 py-2 text-sm text-on-surface transition-all focus:outline-none ${
                     token
                       ? "bg-surface-container-low/50 text-on-surface-variant cursor-not-allowed border-outline-variant/30"
@@ -199,6 +220,7 @@ export default function CreateAccount() {
                   {...register("password")}
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
+                  maxLength={128}
                   className="w-full border border-outline-variant/60 focus:border-primary rounded-lg pl-9 pr-10 py-2 text-sm text-on-surface bg-surface-container-low focus:bg-white focus:outline-none transition-all"
                 />
 
@@ -220,18 +242,14 @@ export default function CreateAccount() {
                 <p className="text-xs text-red-600 font-medium">
                   {errors.password.message}
                 </p>
-              ) : backendErrorMessage && backendErrorMessage.toLowerCase().includes("password") ? (
-                <p className="text-xs text-red-600 font-medium">
-                  {backendErrorMessage}
-                </p>
               ) : (
                 <p className="text-[10px] text-on-surface-variant/80">
-                  Must be at least 12 characters including a symbol.
+                  Must be at least 12 characters with uppercase, lowercase, number, and symbol.
                 </p>
               )}
             </div>
 
-            {isError && (
+            {isError && !hasServerFieldErrors && (
               <p className="text-xs text-red-600 font-medium text-center">
                 {backendErrorMessage || "Registration failed. Please check your credentials and try again."}
               </p>

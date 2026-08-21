@@ -45,10 +45,24 @@ const domainPattern = /^(?!-)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,
 const websiteSchema = z
   .string()
   .trim()
-  .min(3, "Website URL is required")
+  .min(1, "Website URL is required")
   .max(200, "Website URL cannot exceed 200 characters")
   .transform((value) => (/^https?:\/\//i.test(value) ? value : `https://${value}`))
-  .pipe(z.string().url("Enter a valid website URL"));
+  .pipe(
+    z
+      .string()
+      .url("Enter a valid website URL")
+      .refine(
+        (value) => {
+          try {
+            return domainPattern.test(new URL(value).hostname);
+          } catch {
+            return false;
+          }
+        },
+        "Enter a valid website URL",
+      ),
+  );
 
 export const organizationStepSchema = z.object({
   organizationName: z
@@ -64,7 +78,7 @@ export const organizationStepSchema = z.object({
     .string()
     .trim()
     .toLowerCase()
-    .min(3, "Company email domain is required")
+    .min(1, "Company email domain is required")
     .max(253, "Company email domain cannot exceed 253 characters")
     .regex(domainPattern, "Enter a valid domain, for example yourcompany.com"),
   logoUrl: z.string().trim().max(500, "Logo URL cannot exceed 500 characters").optional(),
@@ -101,7 +115,11 @@ export const themeStepSchema = z.object({
 
 export type OrganizationStepFormInput = z.input<typeof organizationStepSchema>;
 export type OrganizationStepFormData = z.output<typeof organizationStepSchema>;
-export type EmailVolumeFormData = z.infer<typeof emailVolumeStepSchema>;
-export type IndustrySectorFormData = z.infer<typeof industrySectorStepSchema>;
-export type SourceStepFormData = z.infer<typeof sourceStepSchema>;
-export type ThemeStepFormData = z.infer<typeof themeStepSchema>;
+export type EmailVolumeStepFormInput = z.input<typeof emailVolumeStepSchema>;
+export type EmailVolumeStepFormData = z.output<typeof emailVolumeStepSchema>;
+export type IndustrySectorStepFormInput = z.input<typeof industrySectorStepSchema>;
+export type IndustrySectorStepFormData = z.output<typeof industrySectorStepSchema>;
+export type SourceStepFormInput = z.input<typeof sourceStepSchema>;
+export type SourceStepFormData = z.output<typeof sourceStepSchema>;
+export type ThemeStepFormInput = z.input<typeof themeStepSchema>;
+export type ThemeStepFormData = z.output<typeof themeStepSchema>;

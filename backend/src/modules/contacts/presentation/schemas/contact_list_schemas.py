@@ -116,6 +116,11 @@ class ContactListItemsResponseSchema(BaseSchema):
     offset: int
 
 
+class SheetPreviewSchema(BaseSchema):
+    headers: list[str] = Field(default_factory=list)
+    rows: list[list[str]] = Field(default_factory=list)
+
+
 class ImportResponseSchema(BaseSchema):
     total: int
     imported: int
@@ -124,6 +129,7 @@ class ImportResponseSchema(BaseSchema):
     duplicates: int = 0
     skipped: int = 0
     reasons: dict[str, int] = Field(default_factory=dict)
+    preview: SheetPreviewSchema | None = None
 
 
 class SheetTabSchema(BaseSchema):

@@ -20,6 +20,7 @@ const IGNORE_401_ENDPOINTS = [
   "/auth/email/verify",
   "/auth/me",
   "/auth/logout",
+  "/auth/2fa/verify-login",
 ];
 
 api.interceptors.response.use(

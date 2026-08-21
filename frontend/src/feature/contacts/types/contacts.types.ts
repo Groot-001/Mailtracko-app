@@ -45,6 +45,10 @@ export interface ImportSuccessData {
   duplicates?: number;
   skipped?: number;
   reasons?: Record<string, number>;
+  preview?: {
+    headers: string[];
+    rows: string[][];
+  };
 }
 
 export interface SheetsOAuthInitResponse {

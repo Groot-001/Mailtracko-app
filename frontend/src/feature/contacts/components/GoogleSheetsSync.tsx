@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import {
@@ -11,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { AppSelect } from "../../../shared/components/AppSelect";
+import { DataPreviewTable } from "../../../shared/components/DataPreviewTable";
 import { getApiErrorMessage } from "../../../shared/utils/apiError";
 import {
   importFromGoogleSheet,
@@ -19,6 +22,23 @@ import {
   listGoogleSheetsTabs,
 } from "../api/contactsApi";
 import type { ImportSuccessData } from "../types/contacts.types";
+
+const SHEET_URL_RE = /^https:\/\/docs\.google\.com\/spreadsheets\/d\/[A-Za-z0-9_-]+/;
+
+const sheetImportSchema = z.object({
+  sheetUrl: z
+    .string()
+    .trim()
+    .min(1, "Paste a valid Google Sheets URL, for example https://docs.google.com/spreadsheets/d/...")
+    .regex(
+      SHEET_URL_RE,
+      "Paste a valid Google Sheets URL, for example https://docs.google.com/spreadsheets/d/...",
+    ),
+  tab: z.string(),
+  listUuid: z.string(),
+});
+
+type SheetImportFormValues = z.infer<typeof sheetImportSchema>;
 
 export const GoogleSheetsSync = () => {
   const queryClient = useQueryClient();
@@ -34,10 +54,27 @@ export const GoogleSheetsSync = () => {
     queryKey: ["contact-lists", "sheet-import"],
     queryFn: () => listContactLists(200),
   });
-  const [sheetUrl, setSheetUrl] = useState("");
-  const [listUuid, setListUuid] = useState("");
-  const [tab, setTab] = useState("");
   const [result, setResult] = useState<ImportSuccessData | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    formState: { errors },
+  } = useForm<SheetImportFormValues>({
+    resolver: zodResolver(sheetImportSchema),
+    defaultValues: {
+      sheetUrl: "",
+      tab: "",
+      listUuid: "",
+    },
+  });
+
+  const sheetUrl = watch("sheetUrl");
+  const tab = watch("tab");
+  const listUuid = watch("listUuid");
 
   const oauth = useMutation({
     mutationFn: initGoogleSheetsOauth,
@@ -45,33 +82,27 @@ export const GoogleSheetsSync = () => {
   });
   const tabs = useMutation({
     mutationFn: listGoogleSheetsTabs,
-    onSuccess: (data) => setTab(data.tabs[0]?.title || ""),
+    onSuccess: (data) => {
+      setValue("tab", data.tabs[0]?.title || "", { shouldDirty: true, shouldValidate: true });
+    },
   });
   const importMutation = useMutation({
     mutationFn: () => importFromGoogleSheet(listUuid, sheetUrl.trim(), tab),
     onSuccess: (data) => {
       setResult(data);
+      reset();
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({ queryKey: ["contacts", "import-history"] });
       queryClient.invalidateQueries({ queryKey: ["contact-lists"] });
     },
   });
 
-  const loadTabs = (event: FormEvent) => {
-    event.preventDefault();
-    const normalizedUrl = sheetUrl.trim();
+  const loadTabs = handleSubmit((values) => {
     setResult(null);
-    setTab("");
-    if (!/^https:\/\/docs\.google\.com\/spreadsheets\/d\/[A-Za-z0-9_-]+/.test(normalizedUrl)) {
-      setOauthNotice({
-        kind: "error",
-        message: "Paste a valid Google Sheets URL, for example https://docs.google.com/spreadsheets/d/...",
-      });
-      return;
-    }
+    setValue("tab", "", { shouldDirty: true, shouldValidate: true });
     setOauthNotice(null);
-    tabs.mutate(normalizedUrl);
-  };
+    tabs.mutate(values.sheetUrl.trim());
+  });
 
   const requestError = tabs.error || oauth.error || importMutation.error || lists.error;
 
@@ -156,25 +187,26 @@ export const GoogleSheetsSync = () => {
           <div>
             <h2 className="font-bold">Import source</h2>
             <p className="text-xs text-[#756F60]">
-              Paste the complete Google Sheets URL after authorizing your account.
+              Paste the complete Google Sheets URL after authorizing your account. The
+              sheet header must contain all columns of the CSV import template:
+              email, first_name, last_name, company, phone, city, state, country.
             </p>
           </div>
         </div>
 
-        <form onSubmit={loadTabs} className="mt-6 space-y-5">
+        <form onSubmit={loadTabs} noValidate className="mt-6 space-y-5">
           <label className="block">
             <span className="text-xs font-bold text-[#4C4736]">Google Sheets URL</span>
             <div className="mt-1.5 flex flex-col gap-2 sm:flex-row">
               <input
                 type="url"
-                required
                 maxLength={2048}
                 autoComplete="url"
-                value={sheetUrl}
-                onChange={(event) => {
-                  setSheetUrl(event.target.value);
-                  setResult(null);
-                }}
+                {...register("sheetUrl", {
+                  onChange: () => {
+                    setResult(null);
+                  },
+                })}
                 placeholder="https://docs.google.com/spreadsheets/d/..."
                 className="min-w-0 flex-1 rounded-xl border border-[#CEC6B0]/60 bg-white px-3 py-2.5 text-sm text-[#1A1C1C] placeholder:text-[#9A9385] focus:border-[#8F740D] focus:outline-none focus:ring-1 focus:ring-[#F1D442]/30"
               />
@@ -190,6 +222,11 @@ export const GoogleSheetsSync = () => {
                 Load worksheets
               </button>
             </div>
+            {errors.sheetUrl && (
+              <span role="alert" className="mt-1.5 block text-xs font-semibold text-red-600">
+                {errors.sheetUrl.message}
+              </span>
+            )}
           </label>
 
           {requestError && (
@@ -217,7 +254,7 @@ export const GoogleSheetsSync = () => {
               <span className="text-xs font-bold text-[#4C4736]">Worksheet</span>
               <AppSelect
                 value={tab}
-                onValueChange={setTab}
+                onValueChange={(value) => setValue("tab", value, { shouldDirty: true, shouldValidate: true })}
                 disabled={!tabs.data?.tabs.length}
                 ariaLabel="Worksheet"
                 searchable
@@ -233,7 +270,7 @@ export const GoogleSheetsSync = () => {
               <span className="text-xs font-bold text-[#4C4736]">Target collection</span>
               <AppSelect
                 value={listUuid}
-                onValueChange={setListUuid}
+                onValueChange={(value) => setValue("listUuid", value, { shouldDirty: true, shouldValidate: true })}
                 disabled={lists.isPending || lists.isError}
                 ariaLabel="Target collection"
                 searchable
@@ -278,6 +315,18 @@ export const GoogleSheetsSync = () => {
               </div>
             ))}
           </div>
+
+          {result.preview && result.preview.headers.length > 0 && (
+            <div className="mt-5">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#756F60]">
+                Imported data preview
+              </p>
+              <DataPreviewTable
+                headers={result.preview.headers}
+                rows={result.preview.rows}
+              />
+            </div>
+          )}
 
           {result.errors.length > 0 && (
             <div className="mt-5 divide-y divide-red-100 rounded-xl border border-red-200 bg-red-50">

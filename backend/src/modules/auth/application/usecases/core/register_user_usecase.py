@@ -7,7 +7,8 @@ from src.modules.auth.domain.services.user_account_domain_service import UserAcc
 from src.modules.auth.domain.services.user_domain_service import UserDomainService
 from src.modules.auth.domain.services.user_session_domain_service import UserSessionDomainService
 from src.modules.auth.domain.services.user_token_domain_service import UserTokenDomainService
-from src.shared.exceptions.base_exceptions import ConflictError, DomainError, ServerError
+from src.shared.exceptions.base_exceptions import ConflictError, DomainError, InvalidError, ServerError
+from src.shared.infrastructure.background_task_manager.task_manager import task_manager
 from src.shared.mediator.mediator import mediator
 
 
@@ -34,12 +35,22 @@ class RegisterUserUseCase:
         invite_token: str | None = None,
     ) -> dict:
         try:
-            email = self.user_domain_service.validate_email(email)
-            self.user_domain_service.validate_password(password)
+            try:
+                email = self.user_domain_service.validate_email(email)
+            except InvalidError as e:
+                raise InvalidError(error=e.error, errors={"email": e.error}) from e
+
+            try:
+                self.user_domain_service.validate_password(password)
+            except InvalidError as e:
+                raise InvalidError(error=e.error, errors={"password": e.error}) from e
 
             existing = await self.user_domain_service.get_user_by_email(email)
             if existing:
-                raise ConflictError(error="Email already registered")
+                raise ConflictError(
+                    error="This email is already registered",
+                    errors={"email": "This email is already registered"},
+                )
 
             password_hash = self.user_domain_service.hash_password(password)
 
@@ -77,10 +88,13 @@ class RegisterUserUseCase:
                 )
             )
             for event in new_user.pull_events():
-                await mediator.publish(
-                    event,
-                    raise_on_error=isinstance(event, EmailVerificationTokenCreatedEvent),
-                )
+                if isinstance(event, EmailVerificationTokenCreatedEvent):
+                    # Email delivery must never block or fail the signup request.
+                    # The verification email is sent in the background and its
+                    # failure is logged, not returned to the caller.
+                    task_manager.add_task(mediator.publish(event, raise_on_error=False))
+                else:
+                    await mediator.publish(event)
 
             return {
                 "requires_login": True,

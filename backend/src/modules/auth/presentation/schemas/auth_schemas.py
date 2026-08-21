@@ -7,9 +7,9 @@ from src.shared.schemas.base_schema import BaseSchema, DomainEmail, DomainString
 
 
 class RegisterRequest(BaseSchema):
-    full_name: NameString
+    full_name: NameString = Field(min_length=1)
     email: DomainEmail
-    password: DomainString
+    password: str = Field(min_length=1, max_length=128)
     invite_token: DomainString | None = None
 
 
@@ -111,6 +111,7 @@ class UserResponse(BaseSchema):
     location: str | None = None
     theme: DomainString
     is_2fa_enabled: bool = False
+    has_password: bool = True
     created_at: DomainString | None = None
 
     model_config = ConfigDict(from_attributes=True)

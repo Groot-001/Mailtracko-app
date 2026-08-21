@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Users,
   Share2,
@@ -12,7 +13,11 @@ import {
   Quote,
 } from "lucide-react";
 import type { SourceDiscoveryOption } from "../types/onboarding.types";
-import { sourceStepSchema } from "../schema/onboardingSchema";
+import {
+  sourceStepSchema,
+  type SourceStepFormData,
+  type SourceStepFormInput,
+} from "../schema/onboardingSchema";
 
 interface Step5SourceDiscoveryProps {
   initialSource: string;
@@ -74,23 +79,28 @@ export function Step5SourceDiscovery({
   onNext,
   onBack,
 }: Step5SourceDiscoveryProps) {
-  const [selected, setSelected] = useState<string>(initialSource || "");
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const {
+    handleSubmit,
+    control,
+    setValue,
+    formState: { errors },
+  } = useForm<SourceStepFormInput, unknown, SourceStepFormData>({
+    resolver: zodResolver(sourceStepSchema),
+    defaultValues: {
+      source: initialSource as SourceStepFormInput["source"],
+    },
+  });
 
-  const handleContinue = () => {
-    const result = sourceStepSchema.safeParse({ source: selected });
-    if (!result.success) {
-      setValidationError(result.error.issues[0]?.message ?? "Please review this step");
-      return;
-    }
-    setValidationError(null);
-    onNext(result.data.source);
+  const selected = useWatch({ control, name: "source" });
+
+  const onSubmit = (data: SourceStepFormData) => {
+    onNext(data.source);
   };
 
   return (
     <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
       {/* Left Main Options Container */}
-      <div className="lg:col-span-8 bg-white border border-[#CEC6B0]/40 rounded-2xl p-6 sm:p-10 shadow-lg space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="lg:col-span-8 bg-white border border-[#CEC6B0]/40 rounded-2xl p-6 sm:p-10 shadow-lg space-y-6">
         <div className="inline-block bg-[#F5E29F]/50 text-[#8F740D] border border-[#F2DF9C] px-3 py-1 rounded-full text-xs font-semibold">
           Step 5 of 7
         </div>
@@ -112,7 +122,7 @@ export function Step5SourceDiscovery({
               <button
                 key={item.id}
                 type="button"
-                onClick={() => { setSelected(item.id); setValidationError(null); }}
+                onClick={() => setValue("source", item.id as SourceStepFormInput["source"], { shouldValidate: true })}
                 className={`border-2 rounded-xl p-4 flex items-center justify-between transition-all cursor-pointer ${
                   isSelected
                     ? "bg-[#F5E29F]/20 border-[#8F740D] shadow-xs"
@@ -145,8 +155,8 @@ export function Step5SourceDiscovery({
           })}
         </div>
 
-        {validationError && (
-          <p role="alert" className="text-sm font-medium text-red-600">{validationError}</p>
+        {errors.source && (
+          <p role="alert" className="text-sm font-medium text-red-600">{errors.source.message}</p>
         )}
 
         {/* Action Bar */}
@@ -160,8 +170,7 @@ export function Step5SourceDiscovery({
           </button>
 
           <button
-            type="button"
-            onClick={handleContinue}
+            type="submit"
             className="bg-[#8F740D] hover:bg-[#6E5E00] text-white font-bold text-sm px-8 py-3 rounded-xl flex items-center gap-2 transition-all shadow-md cursor-pointer"
           >
             <span>Continue</span>
@@ -174,7 +183,7 @@ export function Step5SourceDiscovery({
           <Lock className="w-3.5 h-3.5 text-[#8F740D]" />
           <span>Your responses are anonymous and help us improve our onboarding.</span>
         </div>
-      </div>
+      </form>
 
       {/* Right Side Info & Pie Chart Graphic */}
       <div className="lg:col-span-4 space-y-6">

@@ -1,5 +1,10 @@
-import { useState } from "react";
-import { emailVolumeStepSchema } from "../schema/onboardingSchema";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  emailVolumeStepSchema,
+  type EmailVolumeStepFormData,
+  type EmailVolumeStepFormInput,
+} from "../schema/onboardingSchema";
 import { Mail, Check, TrendingUp, Star, RefreshCw, ArrowRight, ShieldCheck } from "lucide-react";
 
 interface Step3EmployeeCountProps {
@@ -27,21 +32,26 @@ export function Step3EmployeeCount({
   onNext,
   onBack,
 }: Step3EmployeeCountProps) {
-  const [selected, setSelected] = useState<string>(initialValue || "");
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const {
+    handleSubmit,
+    control,
+    setValue,
+    formState: { errors },
+  } = useForm<EmailVolumeStepFormInput, unknown, EmailVolumeStepFormData>({
+    resolver: zodResolver(emailVolumeStepSchema),
+    defaultValues: {
+      emailVolume: initialValue as EmailVolumeStepFormInput["emailVolume"],
+    },
+  });
 
-  const handleContinue = () => {
-    const result = emailVolumeStepSchema.safeParse({ emailVolume: selected });
-    if (!result.success) {
-      setValidationError(result.error.issues[0]?.message ?? "Please select an email volume");
-      return;
-    }
-    setValidationError(null);
-    onNext(result.data.emailVolume);
+  const selected = useWatch({ control, name: "emailVolume" });
+
+  const onSubmit = (data: EmailVolumeStepFormData) => {
+    onNext(data.emailVolume);
   };
 
   return (
-    <div className="w-full bg-white border border-[#CEC6B0]/40 rounded-2xl p-6 sm:p-10 shadow-lg space-y-8">
+    <form onSubmit={handleSubmit(onSubmit)} className="w-full bg-white border border-[#CEC6B0]/40 rounded-2xl p-6 sm:p-10 shadow-lg space-y-8">
       {/* Top Header */}
       <div className="text-center space-y-3 max-w-2xl mx-auto">
         <div className="inline-block bg-[#F5E29F]/50 text-[#8F740D] border border-[#F2DF9C] px-3 py-1 rounded-full text-xs font-semibold">
@@ -63,7 +73,8 @@ export function Step3EmployeeCount({
             <button
               key={item.id}
               type="button"
-              onClick={() => { setSelected(item.id); setValidationError(null); }}
+              onClick={() => setValue("emailVolume", item.id as EmailVolumeStepFormInput["emailVolume"], { shouldValidate: true })}
+              aria-pressed={isSelected}
               className={`relative border-2 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 transition-all cursor-pointer text-center ${
                 isSelected
                   ? "bg-[#F5E29F]/20 border-[#8F740D] shadow-md ring-2 ring-[#8F740D]/20"
@@ -149,8 +160,10 @@ export function Step3EmployeeCount({
         </div>
       </div>
 
-      {validationError && (
-        <p role="alert" className="text-center text-sm font-medium text-red-600">{validationError}</p>
+      {errors.emailVolume && (
+        <p role="alert" className="text-center text-sm font-medium text-red-600">
+          {errors.emailVolume.message}
+        </p>
       )}
 
       {/* Action Bar */}
@@ -164,14 +177,13 @@ export function Step3EmployeeCount({
         </button>
 
         <button
-          type="button"
-          onClick={handleContinue}
+          type="submit"
           className="bg-[#8F740D] hover:bg-[#6E5E00] text-white font-bold text-sm px-10 py-3 rounded-xl flex items-center gap-2 transition-all shadow-md cursor-pointer"
         >
           <span>Continue</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>
-    </div>
+    </form>
   );
 }

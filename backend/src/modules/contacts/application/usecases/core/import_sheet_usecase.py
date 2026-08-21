@@ -26,6 +26,7 @@ from src.modules.contacts.infrastructure.oauth.google_sheets_oauth_client import
 )
 from src.modules.contacts.application.usecases.core.csv_utils import (
     _EMAIL_RE,
+    CSV_TEMPLATE_FIELDS,
     normalize_import_header,
 )
 from src.modules.email_account.domain.repositories.oauth_config_repository import (
@@ -101,8 +102,26 @@ class ImportSheetUseCase:
                 access_token, spreadsheet_id, tab
             )
 
-            if not values or len(values) < 2:
-                raise InvalidError(error="The selected Google Sheet contains no contact rows")
+            if not values or not values[0]:
+                raise InvalidError(
+                    error=(
+                        "The selected Google Sheet contains no contact rows. "
+                        "Add at least one row of contact data before importing."
+                    )
+                )
+
+            data_rows = [
+                row
+                for row in values[1:]
+                if any((cell or "").strip() for cell in row)
+            ]
+            if not data_rows:
+                raise InvalidError(
+                    error=(
+                        "The selected Google Sheet contains no contact rows. "
+                        "Add at least one row of contact data before importing."
+                    )
+                )
 
             raw_headers = [str(h or "").strip() for h in values[0]]
             headers: list[str] = []
@@ -113,6 +132,19 @@ class ImportSheetUseCase:
                 used_headers[normalized] = occurrence
                 headers.append(
                     normalized if occurrence == 1 else f"{normalized}_{occurrence}"
+                )
+
+            missing_fields = [
+                field for field in CSV_TEMPLATE_FIELDS if field not in used_headers
+            ]
+            if missing_fields:
+                raise InvalidError(
+                    error=(
+                        "The sheet header is missing required columns: "
+                        f"{', '.join(missing_fields)}. The header must contain all "
+                        f"columns of the CSV import template: "
+                        f"{', '.join(CSV_TEMPLATE_FIELDS)}."
+                    )
                 )
 
             email_col_idx = next(
@@ -133,7 +165,7 @@ class ImportSheetUseCase:
 
             parsed_rows = []
             error_rows = []
-            for row_idx, row in enumerate(values[1:], start=2):
+            for row_idx, row in enumerate(data_rows, start=2):
                 email_val = ""
                 metadata = {}
                 for col_idx, cell in enumerate(row):
@@ -236,6 +268,12 @@ class ImportSheetUseCase:
             )
             await self.import_log_repo.add(log)
 
+            preview_rows = []
+            for row in data_rows[:100]:
+                preview_rows.append(
+                    [(cell or "").strip() for cell in row[: len(headers)]]
+                )
+
             return {
                 "total": len(parsed_rows) + len(error_rows),
                 "imported": imported_count,
@@ -246,6 +284,10 @@ class ImportSheetUseCase:
                 "reasons": {
                     "duplicate_email": duplicate_count,
                     "invalid_row": len(error_rows),
+                },
+                "preview": {
+                    "headers": headers,
+                    "rows": preview_rows,
                 },
             }
 

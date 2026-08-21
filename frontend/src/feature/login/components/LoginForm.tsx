@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import type { SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -6,12 +6,14 @@ import mailicon from "../../../assets/Background.svg";
 import emailcontainer from "../../../assets/Container.svg";
 import passwordIcon from "../../../assets/password.svg";
 import right from "../../../assets/right.svg";
-import google from "../../../assets/Google.png";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useLogin } from "../hooks/useLoginHooks";
 import { LoginSchema, type LoginFormData } from "../schema/LoginSchema";
 import { Eye, EyeOff } from "lucide-react";
-import { getApiErrorMessage } from "../../../shared/utils/apiError";
+import {
+  getApiErrorMessage,
+  getApiFieldErrors,
+} from "../../../shared/utils/apiError";
 import { storePending2FAToken } from "../../../shared/auth/pending2FA";
 
 export default function LoginForm() {
@@ -21,15 +23,31 @@ export default function LoginForm() {
   const {
     register,
     handleSubmit,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(LoginSchema),
   });
 
   const { mutate, isPending, error } = useLogin();
-  const backendErrorMessage = error
-    ? getApiErrorMessage(error, "")
-    : undefined;
+
+  const serverFieldErrors = useMemo(
+    () => (error ? getApiFieldErrors(error) : {}),
+    [error],
+  );
+
+  const backendErrorMessage =
+    error && Object.keys(serverFieldErrors).length === 0
+      ? getApiErrorMessage(error, "")
+      : undefined;
+
+  useEffect(() => {
+    for (const [field, message] of Object.entries(serverFieldErrors)) {
+      setError(field as keyof LoginFormData, { type: "server", message });
+    }
+  }, [serverFieldErrors, setError]);
+
   const oauthSearch = new URLSearchParams(window.location.search);
   const oauthErrorCode = oauthSearch.get("error");
   const oauthErrorDetail = oauthSearch.get("message")?.trim();
@@ -42,6 +60,7 @@ export default function LoginForm() {
     : undefined);
 
   const onsubmit: SubmitHandler<LoginFormData> = (data) => {
+    clearErrors();
     mutate(data, {
       onSuccess: (envelope) => {
         if (envelope?.data?.requires_email_verification) {
@@ -102,6 +121,15 @@ export default function LoginForm() {
                   Please enter your details to sign in.
                 </span>
               </div>
+
+              {(backendErrorMessage || oauthErrorMessage) && (
+                <div
+                  className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-700 font-medium"
+                  role="alert"
+                >
+                  <span>{backendErrorMessage || oauthErrorMessage}</span>
+                </div>
+              )}
 
               <div className="pt-stack-sm">
                 <form onSubmit={handleSubmit(onsubmit)}>
@@ -198,12 +226,6 @@ export default function LoginForm() {
                           {errors.password.message}
                         </p>
                       )}
-
-                      {(backendErrorMessage || oauthErrorMessage) && (
-                        <p className="text-xs text-red-600 font-medium mt-1" role="alert">
-                          {backendErrorMessage || oauthErrorMessage}
-                        </p>
-                      )}
                     </div>
 
                     {/* Sign In button */}
@@ -241,7 +263,12 @@ export default function LoginForm() {
                   onClick={handleGoogleLogin}
                   className="w-full rounded-lg border border-[#CEC6B0] hover:bg-surface-container-low transition-colors bg-white flex items-center justify-center gap-2.5 py-3 cursor-pointer"
                 >
-                  <img src={google} alt="Google" className="w-4 h-4" />
+                  <img
+                    src="https://www.google.com/favicon.ico"
+                    alt="Google"
+                    className="w-4 h-4"
+                    aria-hidden="true"
+                  />
                   <span className="text-xs font-semibold text-[#1A1C1C]">
                     Google
                   </span>

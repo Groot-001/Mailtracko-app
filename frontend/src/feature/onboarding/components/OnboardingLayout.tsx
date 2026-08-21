@@ -32,6 +32,9 @@ export default function OnboardingLayout() {
   const [isLaunching, setIsLaunching] = useState(false);
 
   const handleStepClick = (step: number) => {
+    // Clear any stale launch validation message as soon as the user leaves the
+    // review step so an old error cannot linger over later edits.
+    setLaunchError(null);
     if (step <= onboarding.currentStep) onboarding.setStep(step);
   };
 
@@ -213,7 +216,10 @@ export default function OnboardingLayout() {
         {onboarding.currentStep === 7 && (
           <Step7ReviewFinish
             onboardingState={onboarding}
-            onEditStep={(step: number) => onboarding.setStep(step)}
+            onEditStep={(step: number) => {
+              setLaunchError(null);
+              onboarding.setStep(step);
+            }}
             onLaunchWorkspace={handleLaunchWorkspace}
             isSubmitting={isLaunching || onboarding.isSubmitting}
             errorMessage={launchError}

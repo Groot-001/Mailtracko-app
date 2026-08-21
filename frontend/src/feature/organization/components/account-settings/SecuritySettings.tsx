@@ -443,21 +443,33 @@ export const SecuritySettings = () => {
         </div>
 
         {/* Change Password Trigger */}
-        <div className="space-y-4 pt-2 border-t border-[#F4F3F3]">
-          <div className="flex items-center gap-2 text-sm font-semibold text-[#1A1C1C]">
-            <Lock className="w-4 h-4 text-[#8F740D]" />
-            <h3>Change Password</h3>
+        {user?.has_password === false ? (
+          <div className="space-y-4 pt-2 border-t border-[#F4F3F3]">
+            <div className="flex items-center gap-2 text-sm font-semibold text-[#1A1C1C]">
+              <Lock className="w-4 h-4 text-[#8F740D]" />
+              <h3>Password</h3>
+            </div>
+            <p className="text-xs text-[#4C4736] -mt-2">
+              This account was created with Google sign-in and does not use a password.
+            </p>
           </div>
-          <p className="text-xs text-[#4C4736] -mt-2">
-            Update your password regularly to keep your account secure.
-          </p>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="px-4 py-2 border border-[#CEC6B0]/60 rounded-xl text-xs font-semibold text-[#1A1C1C] hover:bg-[#F4F3F3] transition-colors cursor-pointer bg-white"
-          >
-            Change Password
-          </button>
-        </div>
+        ) : (
+          <div className="space-y-4 pt-2 border-t border-[#F4F3F3]">
+            <div className="flex items-center gap-2 text-sm font-semibold text-[#1A1C1C]">
+              <Lock className="w-4 h-4 text-[#8F740D]" />
+              <h3>Change Password</h3>
+            </div>
+            <p className="text-xs text-[#4C4736] -mt-2">
+              Update your password regularly to keep your account secure.
+            </p>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="px-4 py-2 border border-[#CEC6B0]/60 rounded-xl text-xs font-semibold text-[#1A1C1C] hover:bg-[#F4F3F3] transition-colors cursor-pointer bg-white"
+            >
+              Change Password
+            </button>
+          </div>
+        )}
 
         {/* Two-Factor Authentication */}
         <div className="space-y-4 pt-4 border-t border-[#F4F3F3]">
