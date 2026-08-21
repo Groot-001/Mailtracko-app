@@ -8,6 +8,7 @@ import { Link, useSearch } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useContacts } from '../hooks/useContacts'
 import { useContactLists } from '../hooks/useContactLists'
+import { PageContainer } from '../../../shared/components/layout'
 import { AppSelect } from '../../../shared/components/AppSelect'
 import { ConfirmDialog } from '../../../shared/components/ConfirmDialog'
 import { DataPreviewTable } from '../../../shared/components/DataPreviewTable'
@@ -399,7 +400,7 @@ export const ContactsDashboard: React.FC = () => {
         const result = await bulkVerifyContactEmails(activeListUuid, selectedContactUuids.slice(index, index + 200))
         updated.push(...result.items)
       }
-      replaceContacts(updated)
+      await replaceContacts()
       clearContactSelection()
       showToast(`${updated.length} contacts verified`, 'success')
     } catch (error: unknown) {
@@ -881,8 +882,8 @@ export const ContactsDashboard: React.FC = () => {
 
   return (
     <>
-      <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+      <PageContainer>
+        <div className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-amber-100 bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-700">
@@ -1484,7 +1485,7 @@ export const ContactsDashboard: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+      </PageContainer>
   </>
   )
 }

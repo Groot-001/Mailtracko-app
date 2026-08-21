@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { BookOpen, ExternalLink, LifeBuoy, Loader2, MessageCircle, Search, Send } from "lucide-react";
 import { AppSelect } from "../../../shared/components/AppSelect";
+import { PageContainer, PageSection } from "../../../shared/components/layout";
 
 import {
   createSupportTicket,
@@ -70,7 +71,7 @@ function SupportCenter() {
   };
 
   return (
-    <div className="mt-page-container space-y-6">
+    <PageContainer>
       <header className="mt-support-hero rounded-3xl border border-[#E6DDBF] bg-gradient-to-br from-[#FFF8DF] to-white p-7">
         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
           <div className="flex items-start gap-4">
@@ -106,7 +107,8 @@ function SupportCenter() {
         </div>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <PageSection>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-6">
           <section className="rounded-2xl border border-[#CEC6B0]/50 bg-white p-6">
             <div className="flex items-center gap-2">
@@ -271,7 +273,8 @@ function SupportCenter() {
             </button>
           </form>
         </aside>
-      </div>
-    </div>
+        </div>
+      </PageSection>
+    </PageContainer>
   );
 }

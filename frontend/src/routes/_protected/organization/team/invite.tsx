@@ -5,6 +5,7 @@ import { AlertCircle, ArrowLeft, CheckCircle2, Loader2, Send, Users } from "luci
 import { useInviteMember } from "../../../../feature/organization/hooks/useInvitations";
 import type { RoleCode } from "../../../../feature/organization/types/organization.types";
 import { AppSelect } from "../../../../shared/components/AppSelect";
+import { PageContainer, PageHeader, PageSection } from "../../../../shared/components/layout";
 import { getApiErrorMessage } from "../../../../shared/utils/apiError";
 
 export const Route = createFileRoute("/_protected/organization/team/invite")({
@@ -92,17 +93,25 @@ function InviteWizardPage() {
   const failed = sendResults.length - succeeded;
 
   return (
-    <div className="mx-auto max-w-[1480px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#8F740D]">Organization Team</p>
-          <h1 className="mt-1 text-2xl font-bold text-[#1A1C1C]">Invite team members</h1>
-          <p className="mt-1 text-sm text-[#756F60]">Invite people using the roles enforced by the MailTracko backend.</p>
-        </div>
-        <Link to="/organization/team" className="inline-flex items-center gap-2 rounded-xl border border-[#CEC6B0]/60 bg-white px-4 py-2 text-xs font-bold text-[#4C4736] hover:bg-[#F8F7F2]">
-          <ArrowLeft className="h-4 w-4" /> Back to team
-        </Link>
-      </div>
+    <PageContainer nested>
+      <PageHeader
+        title="Invite team members"
+        description="Invite people using the roles enforced by the MailTracko backend."
+        breadcrumbs={
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#8F740D]">
+            Organization Team
+          </p>
+        }
+        actions={
+          <Link
+            to="/organization/team"
+            className="inline-flex items-center gap-2 rounded-xl border border-[#CEC6B0]/60 bg-white px-4 py-2 text-xs font-bold text-[#4C4736] hover:bg-[#F8F7F2]"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back to team
+          </Link>
+        }
+      />
+      <PageSection>
 
       <div className="grid grid-cols-3 gap-2" aria-label="Invitation progress">
         {(["details", "review", "complete"] as const).map((item, index) => {
@@ -169,6 +178,7 @@ function InviteWizardPage() {
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end"><button type="button" onClick={startAnother} className="rounded-xl border border-[#CEC6B0]/60 px-5 py-2.5 text-sm font-semibold">Invite more people</button><Link to="/organization/team" className="rounded-xl bg-[#8F740D] px-5 py-2.5 text-center text-sm font-bold text-white">Return to team</Link></div>
         </section>
       )}
-    </div>
+      </PageSection>
+    </PageContainer>
   );
 }

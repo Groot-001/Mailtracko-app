@@ -8,6 +8,7 @@ import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { PaginationControls } from "../../../shared/components/PaginationControls";
 import { useToast } from "../../../shared/hooks/useToast";
 import { getApiErrorMessage } from "../../../shared/utils/apiError";
+import { PageContainer, PageHeader, PageSection } from "../../../shared/components/layout";
 import {
   addSuppression,
   getSuppressions,
@@ -71,8 +72,7 @@ export const SuppressionList = () => {
   };
 
   return (
-    <div className="mx-auto max-w-[1480px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      
+    <PageContainer>
       <ConfirmDialog
         open={pendingRemove !== null}
         onOpenChange={(open) => {
@@ -87,20 +87,19 @@ export const SuppressionList = () => {
         }}
       />
 
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#8F740D]">Deliverability</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#1A1C1C]">Global suppression list</h1>
-          <p className="mt-1 max-w-2xl text-sm text-[#625D4F]">
-            Unsubscribed, bounced, complained, and manually blocked recipients are enforced across every campaign.
-          </p>
-        </div>
-        <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
-          <ShieldCheck className="h-4 w-4" /> Campaign suppression is active
-        </div>
-      </header>
+      <PageHeader
+        title="Global suppression list"
+        description="Unsubscribed, bounced, complained, and manually blocked recipients are enforced across every campaign."
+        breadcrumbs={<p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#8F740D]">Deliverability</p>}
+        actions={
+          <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+            <ShieldCheck className="h-4 w-4" /> Campaign suppression is active
+          </div>
+        }
+      />
 
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <PageSection>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="overflow-hidden rounded-2xl border border-[#CEC6B0]/50 bg-white">
           <div className="flex flex-col gap-3 border-b border-[#EEE9DC] p-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -178,7 +177,8 @@ export const SuppressionList = () => {
             <button type="submit" disabled={add.isPending} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#8F740D] px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">{add.isPending && <Loader2 className="h-4 w-4 animate-spin" />} {add.isPending ? "Adding…" : "Add to suppression list"}</button>
           </form>
         </aside>
-      </section>
-    </div>
+        </div>
+      </PageSection>
+    </PageContainer>
   );
 };

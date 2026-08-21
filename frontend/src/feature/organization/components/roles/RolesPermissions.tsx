@@ -5,6 +5,7 @@ import { PermissionsMatrix } from "./PermissionsMatrix";
 import { RoleDetails } from "./RoleDetails";
 import type { RoleCode } from "../../types/organization.types";
 import { TeamTabs } from "../team/TeamTabs";
+import { PageContainer } from "../../../../shared/components/layout";
 
 export const RolesPermissions = () => {
   const { selectedRole, setSelectedRole } = useOrganizationStore();
@@ -20,7 +21,7 @@ export const RolesPermissions = () => {
     ROLE_DEFINITIONS[0];
 
   return (
-    <div className="mx-auto max-w-[1480px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+    <PageContainer nested>
       {/* Page Title */}
       <div>
         <h1 className="text-2xl font-bold text-[#1A1C1C] tracking-tight">
@@ -51,6 +52,6 @@ export const RolesPermissions = () => {
         <PermissionsMatrix selectedRole={selectedRole} />
         <RoleDetails role={selectedRoleDef} />
       </div>
-    </div>
+    </PageContainer>
   );
 };

@@ -23,6 +23,7 @@ import {
 import { InlineNotice } from "../../../shared/components/InlineNotice";
 import { Modal } from "../../../shared/components/Modal";
 import { getApiErrorMessage } from "../../../shared/utils/apiError";
+import { PageContainer, PageHeader, PageSection } from "../../../shared/components/layout";
 
 import {
   useABTest,
@@ -119,22 +120,22 @@ export const CampaignDetails = ({
 
   if (campaignQuery.isLoading) {
     return (
-      <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
+      <PageContainer>
         <div className="h-[720px] animate-pulse rounded-2xl bg-[#F0ECE2]" />
-      </div>
+      </PageContainer>
     );
   }
 
   if (campaignQuery.isError || !campaignQuery.data) {
     return (
-      <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
+      <PageContainer>
         <InlineNotice tone="error">
           {getApiErrorMessage(
             campaignQuery.error,
             "Campaign could not be loaded.",
           )}
         </InlineNotice>
-      </div>
+      </PageContainer>
     );
   }
 
@@ -194,22 +195,21 @@ export const CampaignDetails = ({
   };
 
   return (
-    <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
-      <Link
-        to="/campaigns"
-        className="inline-flex items-center gap-2 text-sm font-medium text-[#7A6208] hover:underline"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Campaigns
-      </Link>
-
-      <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight text-[#111827]">
-              {campaign.name}
-            </h1>
-
+    <PageContainer>
+      <PageHeader
+        title={campaign.name}
+        description={campaign.description || "Organization email campaign."}
+        breadcrumbs={
+          <Link
+            to="/campaigns"
+            className="inline-flex items-center gap-2 text-sm font-medium text-[#7A6208] hover:underline"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Campaigns
+          </Link>
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
             <span
               className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusClass(
                 campaign.status,
@@ -221,91 +221,85 @@ export const CampaignDetails = ({
             <span className="rounded-full border border-[#D8C990] bg-[#F8F0D7] px-3 py-1 text-xs font-semibold text-[#735E10]">
               {label(campaign.campaign_type)}
             </span>
+
+            {campaign.status === "draft" && (
+              <Link
+                to="/campaigns/$campaignUuid/edit"
+                params={{ campaignUuid }}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#8F740D] px-4 py-2.5 text-sm font-semibold text-white"
+              >
+                <Edit3 className="h-4 w-4" />
+                Edit Campaign
+              </Link>
+            )}
+
+            {campaign.status === "running" && (
+              <button
+                type="button"
+                onClick={() =>
+                  runAction(
+                    () => pauseMutation.mutateAsync(campaignUuid),
+                    "Campaign paused.",
+                  )
+                }
+                className="inline-flex items-center gap-2 rounded-xl border border-[#D9CFB8] bg-white px-4 py-2.5 text-sm font-semibold text-[#5E5230]"
+              >
+                <PauseCircle className="h-4 w-4" />
+                Pause
+              </button>
+            )}
+
+            {campaign.status === "paused" && (
+              <button
+                type="button"
+                onClick={() =>
+                  runAction(
+                    () => resumeMutation.mutateAsync(campaignUuid),
+                    "Campaign resumed.",
+                  )
+                }
+                className="inline-flex items-center gap-2 rounded-xl border border-[#D9CFB8] bg-white px-4 py-2.5 text-sm font-semibold text-[#5E5230]"
+              >
+                <PlayCircle className="h-4 w-4" />
+                Resume
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const duplicated =
+                    await duplicateMutation.mutateAsync(campaignUuid);
+
+                  navigate({
+                    to: "/campaigns/$campaignUuid/edit",
+                    params: {
+                      campaignUuid: (
+                        duplicated as {
+                          uuid: string;
+                        }
+                      ).uuid,
+                    },
+                  });
+                } catch (error) {
+                  setFeedback({
+                    tone: "error",
+                    text: getApiErrorMessage(
+                      error,
+                      "Campaign could not be duplicated.",
+                    ),
+                  });
+                }
+              }}
+              className="inline-flex items-center gap-2 rounded-xl border border-[#D9CFB8] bg-white px-4 py-2.5 text-sm font-semibold text-[#5E5230]"
+            >
+              <Copy className="h-4 w-4" />
+              Duplicate
+            </button>
           </div>
-
-          <p className="mt-1.5 max-w-3xl text-sm text-[#756E5C]">
-            {campaign.description || "Organization email campaign."}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {campaign.status === "draft" && (
-            <Link
-              to="/campaigns/$campaignUuid/edit"
-              params={{ campaignUuid }}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#8F740D] px-4 py-2.5 text-sm font-semibold text-white"
-            >
-              <Edit3 className="h-4 w-4" />
-              Edit Campaign
-            </Link>
-          )}
-
-          {campaign.status === "running" && (
-            <button
-              type="button"
-              onClick={() =>
-                runAction(
-                  () => pauseMutation.mutateAsync(campaignUuid),
-                  "Campaign paused.",
-                )
-              }
-              className="inline-flex items-center gap-2 rounded-xl border border-[#D9CFB8] bg-white px-4 py-2.5 text-sm font-semibold text-[#5E5230]"
-            >
-              <PauseCircle className="h-4 w-4" />
-              Pause
-            </button>
-          )}
-
-          {campaign.status === "paused" && (
-            <button
-              type="button"
-              onClick={() =>
-                runAction(
-                  () => resumeMutation.mutateAsync(campaignUuid),
-                  "Campaign resumed.",
-                )
-              }
-              className="inline-flex items-center gap-2 rounded-xl border border-[#D9CFB8] bg-white px-4 py-2.5 text-sm font-semibold text-[#5E5230]"
-            >
-              <PlayCircle className="h-4 w-4" />
-              Resume
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={async () => {
-              try {
-                const duplicated =
-                  await duplicateMutation.mutateAsync(campaignUuid);
-
-                navigate({
-                  to: "/campaigns/$campaignUuid/edit",
-                  params: {
-                    campaignUuid: (
-                      duplicated as {
-                        uuid: string;
-                      }
-                    ).uuid,
-                  },
-                });
-              } catch (error) {
-                setFeedback({
-                  tone: "error",
-                  text: getApiErrorMessage(
-                    error,
-                    "Campaign could not be duplicated.",
-                  ),
-                });
-              }
-            }}
-            className="inline-flex items-center gap-2 rounded-xl border border-[#D9CFB8] bg-white px-4 py-2.5 text-sm font-semibold text-[#5E5230]"
-          >
-            <Copy className="h-4 w-4" />
-            Duplicate
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       {feedback && (
         <div className="mt-5">
@@ -315,7 +309,8 @@ export const CampaignDetails = ({
         </div>
       )}
 
-      <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <PageSection>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {(
           [
             [
@@ -368,8 +363,11 @@ export const CampaignDetails = ({
             </div>
           </div>
         ))}
-      </div>
-      <div className="mt-7 grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
+        </div>
+      </PageSection>
+
+      <PageSection>
+        <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
         <section className="rounded-2xl border border-[#E8E1D0] bg-white p-6 shadow-[0_8px_24px_rgba(66,54,16,0.04)]">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -468,8 +466,10 @@ export const CampaignDetails = ({
           )}
         </section>
       )}
+      </PageSection>
 
-      <section className="mt-6 rounded-2xl border border-[#E8E1D0] bg-white p-6">
+      <PageSection>
+        <section className="rounded-2xl border border-[#E8E1D0] bg-white p-6">
         <div className="flex items-center justify-between gap-3">
           <div><h2 className="text-lg font-semibold text-[#111827]">Recipients</h2><p className="mt-1 text-sm text-[#756E5C]">Most recent campaign recipients and delivery state.</p></div>
           <Users className="h-5 w-5 text-[#8F740D]" />
@@ -490,16 +490,19 @@ export const CampaignDetails = ({
         ) : (
           <p className="mt-4 rounded-xl bg-[#FFFCF5] p-4 text-sm text-[#756E5C]">No recipients have been generated for this campaign yet.</p>
         )}
-      </section>
+        </section>
+      </PageSection>
 
-      <div className="mt-6 flex flex-wrap justify-end gap-2">
+      <PageSection>
+        <div className="flex flex-wrap justify-end gap-2">
         {!['cancelled', 'completed', 'archived'].includes(campaign.status) && (
           <button type="button" onClick={() => setConfirmAction('cancel')} className="inline-flex items-center gap-2 rounded-xl border border-[#E7BDB9] bg-white px-4 py-2.5 text-sm font-semibold text-[#A63830]"><StopCircle className="h-4 w-4" />Cancel campaign</button>
         )}
         {!['archived', 'running', 'launching'].includes(campaign.status) && (
           <button type="button" onClick={() => setConfirmAction('archive')} className="inline-flex items-center gap-2 rounded-xl border border-[#D9CFB8] bg-white px-4 py-2.5 text-sm font-semibold text-[#5E5230]"><Archive className="h-4 w-4" />Archive</button>
         )}
-      </div>
+        </div>
+      </PageSection>
 
       <Modal open={confirmAction !== null} title={confirmAction === 'cancel' ? 'Cancel campaign?' : 'Archive campaign?'} description={confirmAction === 'cancel' ? 'Pending sends will be stopped. This action cannot be undone.' : 'The campaign will be kept with Archived status so its history and analytics remain available.'} onClose={() => setConfirmAction(null)}>
         <div className="flex justify-end gap-2">
@@ -507,6 +510,6 @@ export const CampaignDetails = ({
           <button type="button" onClick={confirmDestructiveAction} className="rounded-xl bg-[#A63830] px-4 py-2 text-sm font-semibold text-white">Confirm</button>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 };

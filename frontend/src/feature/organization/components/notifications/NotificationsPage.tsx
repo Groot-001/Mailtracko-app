@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, Building2, CheckCheck, Loader2, MailOpen, ShieldCheck } from "lucide-react";
+import { PageContainer, PageHeader, PageSection } from "../../../../shared/components/layout";
 
 import {
   getAppNotifications,
@@ -56,27 +57,42 @@ export const NotificationsPage = () => {
     }`;
 
   return (
-    <div className="mx-auto max-w-[1480px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#8F740D]">Activity center</p>
-          <h1 className="mt-1 text-2xl font-bold">Notifications</h1>
-          <p className="mt-1 max-w-2xl text-sm text-[#756F60]">
-            Personal account activity is kept separate from organization/team activity and system notifications.
+    <PageContainer nested>
+      <PageHeader
+        title="Notifications"
+        description="Personal account activity is kept separate from organization/team activity and system notifications."
+        breadcrumbs={
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#8F740D]">
+            Activity center
           </p>
-        </div>
-        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Notification type">
-          <button type="button" className={tabClass("personal")} onClick={() => setView("personal")}>
-            <ShieldCheck className="h-4 w-4" /> Personal
-          </button>
-          <button type="button" className={tabClass("organization")} onClick={() => setView("organization")}>
-            <Building2 className="h-4 w-4" /> Organization
-          </button>
-          <button type="button" className={tabClass("system")} onClick={() => setView("system")}>
-            <Bell className="h-4 w-4" /> System
-          </button>
-        </div>
-      </header>
+        }
+        actions={
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Notification type">
+            <button
+              type="button"
+              className={tabClass("personal")}
+              onClick={() => setView("personal")}
+            >
+              <ShieldCheck className="h-4 w-4" /> Personal
+            </button>
+            <button
+              type="button"
+              className={tabClass("organization")}
+              onClick={() => setView("organization")}
+            >
+              <Building2 className="h-4 w-4" /> Organization
+            </button>
+            <button
+              type="button"
+              className={tabClass("system")}
+              onClick={() => setView("system")}
+            >
+              <Bell className="h-4 w-4" /> System
+            </button>
+          </div>
+        }
+      />
+      <PageSection>
 
       {view === "system" && (
         <div className="flex flex-wrap justify-end gap-2">
@@ -184,7 +200,8 @@ export const NotificationsPage = () => {
           )
         )}
       </section>
-    </div>
+      </PageSection>
+    </PageContainer>
   );
 };
 

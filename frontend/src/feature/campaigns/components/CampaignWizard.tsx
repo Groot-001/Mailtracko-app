@@ -3,6 +3,7 @@ import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, Check, Rocket, Save } from "lucide-react";
 import { InlineNotice } from "../../../shared/components/InlineNotice";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
+import { PageContainer } from "../../../shared/components/layout";
 import { getApiErrorMessage } from "../../../shared/utils/apiError";
 import { zonedLocalDateTimeToIso } from "../../../shared/utils/dateTime";
 import {
@@ -719,26 +720,26 @@ export const CampaignWizard = ({ campaignUuid }: CampaignWizardProps) => {
 
   if (editing && campaignQuery.isLoading) {
     return (
-      <div className="mx-auto max-w-[1480px] space-y-4 px-4 py-6 sm:px-6 lg:px-8">
+      <PageContainer className="space-y-4">
         <div className="h-10 w-72 animate-pulse rounded-xl bg-[#EEE9DC]" />
         <div className="h-[620px] animate-pulse rounded-2xl bg-[#F1EDE3]" />
-      </div>
+      </PageContainer>
     );
   }
 
   if (editing && (campaignQuery.isError || !campaignQuery.data)) {
     return (
-      <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
+      <PageContainer>
         <InlineNotice tone="error">
           {getApiErrorMessage(campaignQuery.error, "The campaign could not be opened.")}
         </InlineNotice>
-      </div>
+      </PageContainer>
     );
   }
 
   if (isNonDraft && campaignQuery.data) {
     return (
-      <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
+      <PageContainer>
         <InlineNotice>
           This campaign is currently {campaignQuery.data.status}. Only draft campaigns can be edited.
           <Link
@@ -750,12 +751,12 @@ export const CampaignWizard = ({ campaignUuid }: CampaignWizardProps) => {
           </Link>
           .
         </InlineNotice>
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
+    <PageContainer>
       <ConfirmDialog
         open={blocker.status === "blocked"}
         onOpenChange={(open) => { if (!open && blocker.status === "blocked") blocker.reset(); }}
@@ -873,6 +874,6 @@ export const CampaignWizard = ({ campaignUuid }: CampaignWizardProps) => {
           </button>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 };

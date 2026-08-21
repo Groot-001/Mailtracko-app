@@ -16,6 +16,8 @@ import {
   Users,
 } from "lucide-react";
 
+import { PageContainer, PageHeader, PageSection } from "../../../shared/components/layout";
+
 import {
   deleteAdminOrganization,
   deleteAdminUser,
@@ -170,15 +172,20 @@ function AdminConsole() {
   ] as const;
 
   return (
-    <div className="mx-auto max-w-[1480px] space-y-7 px-4 py-6 sm:px-6 lg:px-8">
-      
-      <header>
-        <div className="flex items-center gap-2 text-[#8F740D]"><Shield className="h-5 w-5" /><p className="text-[11px] font-bold uppercase tracking-[0.18em]">Platform control plane</p></div>
-        <h1 className="mt-2 text-2xl font-bold">MailTracko administration</h1>
-        <p className="mt-1 text-sm text-[#756F60]">Tenant operations, revenue, support, risk, plans, providers, and feature controls use audited APIs.</p>
-      </header>
+    <PageContainer>
+      <PageHeader
+        title="MailTracko administration"
+        description="Tenant operations, revenue, support, risk, plans, providers, and feature controls use audited APIs."
+        breadcrumbs={
+          <div className="flex items-center gap-2 text-[#8F740D]">
+            <Shield className="h-4 w-4" />
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em]">Platform control plane</p>
+          </div>
+        }
+      />
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+      <PageSection>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
         {cards.map(([label, value, detail, Icon]) => (
           <article key={label} className="rounded-2xl border border-[#CEC6B0]/50 bg-white p-4">
             <Icon className="h-5 w-5 text-[#8F740D]" />
@@ -187,9 +194,11 @@ function AdminConsole() {
             <p className="mt-1 text-[11px] text-[#756F60]">{detail}</p>
           </article>
         ))}
-      </section>
+        </div>
+      </PageSection>
 
-      <section className="grid gap-3 sm:grid-cols-2">
+      <PageSection>
+        <div className="grid gap-3 sm:grid-cols-2">
         <div className="flex items-center gap-3 rounded-2xl border border-[#CEC6B0]/50 bg-white p-4">
           <Database className={`h-5 w-5 ${data.infrastructure.database === "healthy" ? "text-emerald-600" : "text-red-600"}`} />
           <div><p className="text-xs font-bold">PostgreSQL</p><p className="text-[11px] capitalize text-[#756F60]">{data.infrastructure.database}</p></div>
@@ -198,11 +207,15 @@ function AdminConsole() {
           <Server className={`h-5 w-5 ${data.infrastructure.redis === "healthy" ? "text-emerald-600" : "text-red-600"}`} />
           <div><p className="text-xs font-bold">Redis</p><p className="text-[11px] capitalize text-[#756F60]">{data.infrastructure.redis}</p></div>
         </div>
-      </section>
+        </div>
+      </PageSection>
 
-      <StripeAdminPanel />
+      <PageSection>
+        <StripeAdminPanel />
+      </PageSection>
 
-      <section className="overflow-hidden rounded-2xl border border-[#CEC6B0]/50 bg-white">
+      <PageSection>
+        <section className="overflow-hidden rounded-2xl border border-[#CEC6B0]/50 bg-white">
         <header className="border-b border-[#EEE9DC] p-5">
           <h2 className="font-bold">Customer organizations</h2>
           <p className="text-xs text-[#756F60]">Subscription and operational status across all tenants.</p>
@@ -236,8 +249,10 @@ function AdminConsole() {
           <p className="p-10 text-center text-sm text-[#756F60]">No customer organizations found.</p>
         )}
       </section>
+      </PageSection>
 
-      <section className="overflow-hidden rounded-2xl border border-[#CEC6B0]/50 bg-white">
+      <PageSection>
+        <section className="overflow-hidden rounded-2xl border border-[#CEC6B0]/50 bg-white">
         <header className="flex flex-col justify-between gap-4 border-b border-[#EEE9DC] p-5 sm:flex-row sm:items-end">
           <div><h2 className="font-bold">User management</h2><p className="text-xs text-[#756F60]">Search, suspend, reactivate, or soft-delete user accounts.</p></div>
           <label className="flex items-center gap-2 rounded-xl border border-[#CEC6B0]/60 bg-[#FBFAF6] px-3 py-2"><Search className="h-4 w-4 text-[#756F60]" /><span className="sr-only">Search users</span><input value={userSearchInput} onChange={(event) => setUserSearchInput(event.target.value)} placeholder="Search users" className="bg-transparent text-sm outline-none" /></label>
@@ -269,7 +284,8 @@ function AdminConsole() {
         ) : (
           <p className="p-10 text-center text-sm text-[#756F60]">No users match the current search.</p>
         )}
-      </section>
+        </section>
+      </PageSection>
 
       <ConfirmDialog
         open={pendingDelete !== null}
@@ -284,7 +300,7 @@ function AdminConsole() {
         isLoading={deleting}
         onConfirm={handleConfirmDelete}
       />
-    </div>
+    </PageContainer>
   );
 }
 

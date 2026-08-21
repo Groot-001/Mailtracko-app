@@ -19,6 +19,7 @@ import { PaginationControls } from "../../../shared/components/PaginationControl
 import { InlineNotice } from "../../../shared/components/InlineNotice";
 import { Modal } from "../../../shared/components/Modal";
 import { getApiErrorMessage } from "../../../shared/utils/apiError";
+import { PageContainer, PageHeader, PageSection } from "../../../shared/components/layout";
 import {
   useArchiveTemplate,
   useDeleteTemplate,
@@ -265,22 +266,20 @@ export const TemplateDashboard = () => {
   };
 
   return (
-    <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-[#111827]">Templates</h1>
-          <p className="mt-1.5 text-sm text-[#756E5C]">
-            Create, manage, and reuse email templates across your campaigns.
-          </p>
-        </div>
-        <Link
-          to="/templates/new"
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#8F740D] px-5 py-3 text-sm font-semibold text-white shadow-button transition-colors hover:bg-[#735D0B]"
-        >
-          <Plus className="h-4 w-4" />
-          New Template
-        </Link>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Templates"
+        description="Create, manage, and reuse email templates across your campaigns."
+        actions={
+          <Link
+            to="/templates/new"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#8F740D] px-5 py-3 text-sm font-semibold text-white shadow-button transition-colors hover:bg-[#735D0B]"
+          >
+            <Plus className="h-4 w-4" />
+            New Template
+          </Link>
+        }
+      />
 
       {feedback && (
         <div className="mt-5">
@@ -288,34 +287,37 @@ export const TemplateDashboard = () => {
         </div>
       )}
 
-      <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard
-          icon={FileText}
-          label="Total Templates"
-          value={summary?.total_templates ?? 0}
-          description="All organization templates"
-        />
-        <SummaryCard
-          icon={CheckCircle2}
-          label="Published"
-          value={summary?.published_templates ?? 0}
-          description="Ready for campaigns"
-        />
-        <SummaryCard
-          icon={Edit3}
-          label="Drafts"
-          value={summary?.draft_templates ?? 0}
-          description="Still being prepared"
-        />
-        <SummaryCard
-          icon={Folder}
-          label="Categories"
-          value={summary?.total_categories ?? 0}
-          description="Available template categories"
-        />
-      </div>
+      <PageSection>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <SummaryCard
+            icon={FileText}
+            label="Total Templates"
+            value={summary?.total_templates ?? 0}
+            description="All organization templates"
+          />
+          <SummaryCard
+            icon={CheckCircle2}
+            label="Published"
+            value={summary?.published_templates ?? 0}
+            description="Ready for campaigns"
+          />
+          <SummaryCard
+            icon={Edit3}
+            label="Drafts"
+            value={summary?.draft_templates ?? 0}
+            description="Still being prepared"
+          />
+          <SummaryCard
+            icon={Folder}
+            label="Categories"
+            value={summary?.total_categories ?? 0}
+            description="Available template categories"
+          />
+        </div>
+      </PageSection>
 
-      <div className="mt-6 inline-flex rounded-xl border border-[#DED7C7] bg-white p-1">
+      <PageSection>
+        <div className="inline-flex rounded-xl border border-[#DED7C7] bg-white p-1">
         <button
           type="button"
           onClick={() => switchSection("active")}
@@ -562,6 +564,7 @@ export const TemplateDashboard = () => {
           </div>
         )}
       </section>
+    </PageSection>
 
       <Modal
         open={Boolean(archiveTarget)}
@@ -626,6 +629,6 @@ export const TemplateDashboard = () => {
           </button>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 };

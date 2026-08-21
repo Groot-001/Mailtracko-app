@@ -18,6 +18,7 @@ import {
 } from "../../hooks/useOrganization";
 import { getBillingOverview } from "../../../platform/api/platformApi";
 import { uploadOrganizationLogo } from "../../api/organizationApi";
+import { PageContainer } from "../../../../shared/components/layout";
 import {
   getApiErrorMessage,
   getApiFieldErrors,
@@ -256,11 +257,11 @@ export const OrganizationSettings = () => {
 
   if (isError) {
     return (
-      <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
+      <PageContainer nested>
         <div className="rounded-xl border border-red-400 bg-red-50 p-4 text-red-700">
           Failed to load organization: {String(error)}
         </div>
-      </div>
+      </PageContainer>
     );
   }
 
@@ -268,9 +269,9 @@ export const OrganizationSettings = () => {
     <>
       <form
         onSubmit={save}
-        className="mx-auto max-w-[1480px] space-y-6 px-4 py-6 sm:px-6 lg:px-8"
         noValidate
       >
+        <PageContainer nested>
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-[#1A1C1C]">
           Organization Settings
@@ -613,7 +614,8 @@ export const OrganizationSettings = () => {
           </span>
         </button>
       </div>
-    </form>
+        </PageContainer>
+      </form>
 
     <Modal
       open={showCancelModal}

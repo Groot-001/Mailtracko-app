@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { AppSelect } from "../../../shared/components/AppSelect";
+import { PageContainer, PageHeader, PageSection } from "../../../shared/components/layout";
 import { DataPreviewTable } from "../../../shared/components/DataPreviewTable";
 import { getApiErrorMessage } from "../../../shared/utils/apiError";
 import {
@@ -131,34 +132,32 @@ export const GoogleSheetsSync = () => {
   }, [navigate, search.error, search.message, search.success]);
 
   return (
-    <div className="mx-auto max-w-[1480px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+    <PageContainer>
+      <PageHeader
+        title="Import from Google Sheets"
+        description="Authorize Google, inspect live worksheet tabs, and import into a selected MailTracko collection."
+        breadcrumbs={
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#8F740D]">
             Contacts
           </p>
-          <h1 className="mt-1 text-2xl font-bold text-[#1A1C1C]">
-            Import from Google Sheets
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm text-[#756F60]">
-            Authorize Google, inspect live worksheet tabs, and import into a selected
-            MailTracko collection.
-          </p>
-        </div>
-        <button
-          type="button"
-          disabled={oauth.isPending}
-          onClick={() => oauth.mutate()}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#8F740D] bg-white px-4 py-2.5 text-xs font-bold text-[#6A5B00] disabled:opacity-50"
-        >
-          {oauth.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <ExternalLink className="h-4 w-4" />
-          )}
-          Connect Google account
-        </button>
-      </header>
+        }
+        actions={
+          <button
+            type="button"
+            disabled={oauth.isPending}
+            onClick={() => oauth.mutate()}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#8F740D] bg-white px-4 py-2.5 text-xs font-bold text-[#6A5B00] disabled:opacity-50"
+          >
+            {oauth.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ExternalLink className="h-4 w-4" />
+            )}
+            Connect Google account
+          </button>
+        }
+      />
+      <PageSection>
 
       {oauthNotice && (
         <div
@@ -345,6 +344,7 @@ export const GoogleSheetsSync = () => {
           )}
         </section>
       )}
-    </div>
+      </PageSection>
+    </PageContainer>
   );
 };

@@ -8,6 +8,7 @@ import {
   Code2,
   Palette,
 } from "lucide-react";
+import { PageContainer } from "../../../../shared/components/layout";
 
 // ─── Settings sub-navigation items ────────────────────────────────────────────
 
@@ -58,7 +59,7 @@ export const AccountSettingsLayout = () => {
   };
 
   return (
-    <div className="mx-auto max-w-[1480px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+    <PageContainer>
       {/* Page Title */}
       <div>
         <h1 className="text-2xl font-bold text-[#1A1C1C] tracking-tight">
@@ -125,6 +126,6 @@ export const AccountSettingsLayout = () => {
           <Outlet />
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 };
