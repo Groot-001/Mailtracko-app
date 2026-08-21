@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { getApiErrorMessage } from "../../../../shared/utils/apiError";
 import {
   Lock,
@@ -34,6 +37,27 @@ const PASSWORD_MIN_LENGTH = 12;
 const PASSWORD_MAX_LENGTH = 128;
 const PASSWORD_SPECIAL_CHARACTERS = "!@#$%^&*()_+-=[]{}|;':\",./<>?`~";
 
+const changePasswordSchema = z.object({
+  current_password: z.string().min(1, "Current password is required."),
+  new_password: z
+    .string()
+    .min(PASSWORD_MIN_LENGTH, `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`)
+    .max(PASSWORD_MAX_LENGTH, `Password must be at most ${PASSWORD_MAX_LENGTH} characters.`)
+    .refine((val) => /[A-Z]/.test(val), "Password must contain at least one uppercase letter.")
+    .refine((val) => /[a-z]/.test(val), "Password must contain at least one lowercase letter.")
+    .refine((val) => /\d/.test(val), "Password must contain at least one number.")
+    .refine(
+      (val) => [...val].some((char) => PASSWORD_SPECIAL_CHARACTERS.includes(char)),
+      "Password must contain at least one special character."
+    ),
+  confirm_password: z.string().min(1, "Confirm password is required."),
+}).refine((data) => data.new_password === data.confirm_password, {
+  message: "New password and confirm password do not match.",
+  path: ["confirm_password"],
+});
+
+type ChangePasswordValues = z.infer<typeof changePasswordSchema>;
+
 export const SecuritySettings = () => {
   const store = useAuthStore();
   const user = store.user;
@@ -52,9 +76,22 @@ export const SecuritySettings = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { errors },
+  } = useForm<ChangePasswordValues>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: {
+      current_password: "",
+      new_password: "",
+      confirm_password: "",
+    },
+  });
+
+  const newPasswordVal = watch("new_password") || "";
 
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -234,60 +271,24 @@ export const SecuritySettings = () => {
   };
 
   const handleModalClose = () => {
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
+    reset({
+      current_password: "",
+      new_password: "",
+      confirm_password: "",
+    });
     setShowCurrentPassword(false);
     setShowNewPassword(false);
     setShowConfirmPassword(false);
     setIsModalOpen(false);
   };
 
-  const getPasswordValidationError = (value: string) => {
-    if (value.length < PASSWORD_MIN_LENGTH) {
-      return "Password must be at least 12 characters";
-    }
-    if (value.length > PASSWORD_MAX_LENGTH) {
-      return "Password must be at most 128 characters";
-    }
-    if (!/[A-Z]/.test(value)) {
-      return "Password must contain at least one uppercase letter";
-    }
-    if (!/[a-z]/.test(value)) {
-      return "Password must contain at least one lowercase letter";
-    }
-    if (!/\d/.test(value)) {
-      return "Password must contain at least one number";
-    }
-    if (![...value].some((character) => PASSWORD_SPECIAL_CHARACTERS.includes(character))) {
-      return "Password must contain at least one special character";
-    }
-    return null;
-  };
-
-  const handlePasswordChangeSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      showToast("Please fill in all fields.", "error");
-      return;
-    }
-
-    const passwordValidationError = getPasswordValidationError(newPassword);
-    if (passwordValidationError) {
-      showToast(passwordValidationError, "error");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      showToast("New password and confirm password do not match.", "error");
-      return;
-    }
-
+  const handlePasswordChangeSubmit = async (data: ChangePasswordValues) => {
     setIsSaving(true);
     try {
       await changePassword({
-        current_password: currentPassword,
-        new_password: newPassword,
-        confirm_password: confirmPassword,
+        current_password: data.current_password,
+        new_password: data.new_password,
+        confirm_password: data.confirm_password,
       });
       showToast("Password changed successfully", "success");
       handleModalClose();
@@ -755,7 +756,7 @@ export const SecuritySettings = () => {
         <div className="fixed inset-0 bg-[#1A1C1C]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <form
             noValidate
-            onSubmit={handlePasswordChangeSubmit}
+            onSubmit={handleSubmit(handlePasswordChangeSubmit)}
             className="bg-white rounded-2xl border border-[#CEC6B0]/40 w-full max-w-md p-6 space-y-5 shadow-xl relative animate-in fade-in zoom-in-95 duration-200"
           >
             <div>
@@ -775,8 +776,7 @@ export const SecuritySettings = () => {
                   <input
                     id="modal-current-pw"
                     type={showCurrentPassword ? "text" : "password"}
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    {...register("current_password")}
                     placeholder="Enter current password"
                     className="w-full px-3 py-2.5 pr-10 rounded-xl border border-[#CEC6B0]/60 text-sm text-[#1A1C1C] bg-white focus:outline-none focus:ring-2 focus:ring-[#F1D442]/50 focus:border-[#8F740D] transition-all placeholder-[#CEC6B0]"
                   />
@@ -788,6 +788,11 @@ export const SecuritySettings = () => {
                     {showCurrentPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                   </button>
                 </div>
+                {errors.current_password && (
+                  <p role="alert" className="text-xs font-medium text-red-600 mt-1">
+                    {errors.current_password.message}
+                  </p>
+                )}
               </div>
 
               {/* New Password */}
@@ -799,11 +804,8 @@ export const SecuritySettings = () => {
                   <input
                     id="modal-new-pw"
                     type={showNewPassword ? "text" : "password"}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
+                    {...register("new_password")}
                     placeholder="Enter new password"
-                    minLength={PASSWORD_MIN_LENGTH}
-                    maxLength={PASSWORD_MAX_LENGTH}
                     aria-describedby="modal-new-pw-requirements modal-new-pw-count"
                     className="w-full px-3 py-2.5 pr-10 rounded-xl border border-[#CEC6B0]/60 text-sm text-[#1A1C1C] bg-white focus:outline-none focus:ring-2 focus:ring-[#F1D442]/50 focus:border-[#8F740D] transition-all placeholder-[#CEC6B0]"
                   />
@@ -815,9 +817,14 @@ export const SecuritySettings = () => {
                     {showNewPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                   </button>
                 </div>
+                {errors.new_password && (
+                  <p role="alert" className="text-xs font-medium text-red-600 mt-1">
+                    {errors.new_password.message}
+                  </p>
+                )}
                 <div className="flex items-center justify-between gap-2 text-[11px] text-[#4C4736]">
                   <span id="modal-new-pw-requirements">12–128 characters with uppercase, lowercase, number, and symbol.</span>
-                  <span id="modal-new-pw-count" className="font-semibold" aria-live="polite">{newPassword.length}/{PASSWORD_MAX_LENGTH}</span>
+                  <span id="modal-new-pw-count" className="font-semibold" aria-live="polite">{newPasswordVal.length}/{PASSWORD_MAX_LENGTH}</span>
                 </div>
               </div>
 
@@ -830,10 +837,8 @@ export const SecuritySettings = () => {
                   <input
                     id="modal-confirm-pw"
                     type={showConfirmPassword ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    {...register("confirm_password")}
                     placeholder="Confirm new password"
-                    maxLength={PASSWORD_MAX_LENGTH}
                     className="w-full px-3 py-2.5 pr-10 rounded-xl border border-[#CEC6B0]/60 text-sm text-[#1A1C1C] bg-white focus:outline-none focus:ring-2 focus:ring-[#F1D442]/50 focus:border-[#8F740D] transition-all placeholder-[#CEC6B0]"
                   />
                   <button
@@ -844,6 +849,11 @@ export const SecuritySettings = () => {
                     {showConfirmPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                   </button>
                 </div>
+                {errors.confirm_password && (
+                  <p role="alert" className="text-xs font-medium text-red-600 mt-1">
+                    {errors.confirm_password.message}
+                  </p>
+                )}
               </div>
             </div>
 

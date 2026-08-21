@@ -1,5 +1,6 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { Building2, LayoutDashboard, Settings, ShieldAlert, Users } from "lucide-react";
+import { PageContainer } from "../../../../shared/components/layout";
 
 const organizationTabs = [
   { label: "Overview", to: "/organization", icon: LayoutDashboard },
@@ -32,7 +33,7 @@ export const OrganizationLayout = () => {
   const isNotifications = pathname.startsWith("/organization/notifications");
 
   return (
-    <div className="mx-auto w-full max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
+    <PageContainer>
       <section className="overflow-hidden rounded-2xl border border-[#E8DFC5] bg-white shadow-sm">
         <header className="border-b border-[#EEE9DB] bg-[#FFFCF3] px-5 py-5 sm:px-6">
           <div className="flex items-start gap-3">
@@ -78,6 +79,6 @@ export const OrganizationLayout = () => {
           <Outlet />
         </div>
       </section>
-    </div>
+    </PageContainer>
   );
 };

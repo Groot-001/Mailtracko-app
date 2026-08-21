@@ -21,6 +21,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { PageContainer } from "../../../../shared/components/layout";
 import { useQuery } from "@tanstack/react-query";
 import { useOrganization } from "../../hooks/useOrganization";
 import { useMembers } from "../../hooks/useMembers";
@@ -192,7 +193,7 @@ export const OrganizationOverview = () => {
   }
 
   return (
-    <div className="mx-auto max-w-[1480px] space-y-8 px-4 py-6 sm:px-6 lg:px-8">
+    <PageContainer nested>
       {/* Page Title */}
       <div>
         <h1 className="text-2xl font-bold text-[#1A1C1C] tracking-tight">
@@ -463,6 +464,6 @@ export const OrganizationOverview = () => {
           </div>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 };

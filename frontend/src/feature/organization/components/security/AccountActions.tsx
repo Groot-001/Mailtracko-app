@@ -18,6 +18,7 @@ import {
   useRequestOrganizationDeletion,
 } from "../../hooks/useOrganization";
 import { Link } from "@tanstack/react-router";
+import { PageContainer } from "../../../../shared/components/layout";
 
 // ─── Deletion impact items ────────────────────────────────────────────────────
 
@@ -87,7 +88,7 @@ export const AccountActions = () => {
   };
 
   return (
-    <div className="mx-auto max-w-[1480px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+    <PageContainer nested>
       {/* Page Title */}
       <div>
         <h1 className="text-2xl font-bold text-[#1A1C1C] tracking-tight">
@@ -315,6 +316,6 @@ export const AccountActions = () => {
           {isDeleting ? "Scheduling…" : `Schedule deletion for ${orgName}`}
         </button>
       </div>
-    </div>
+    </PageContainer>
   );
 };

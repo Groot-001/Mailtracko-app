@@ -5,6 +5,7 @@ import { useToast } from "../../../shared/hooks/useToast";
 import { EmailPreviewFrame } from "../../../shared/components/EmailPreviewFrame";
 import { InlineNotice } from "../../../shared/components/InlineNotice";
 import { Modal } from "../../../shared/components/Modal";
+import { PageContainer, PageHeader, PageSection } from "../../../shared/components/layout";
 import { getApiErrorMessage } from "../../../shared/utils/apiError";
 import {
   useArchiveTemplate,
@@ -40,14 +41,20 @@ export const TemplateDetails = ({ templateUuid }: TemplateDetailsProps) => {
   const [feedback, setFeedback] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
   if (templateQuery.isLoading) {
-    return <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8"><div className="h-[680px] animate-pulse rounded-2xl bg-[#F0ECE2]" /></div>;
+    return (
+      <PageContainer>
+        <div className="h-[680px] animate-pulse rounded-2xl bg-[#F0ECE2]" />
+      </PageContainer>
+    );
   }
 
   if (templateQuery.isError || !templateQuery.data) {
     return (
-      <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
-        <InlineNotice tone="error">{getApiErrorMessage(templateQuery.error, "Template could not be loaded.")}</InlineNotice>
-      </div>
+      <PageContainer>
+        <InlineNotice tone="error">
+          {getApiErrorMessage(templateQuery.error, "Template could not be loaded.")}
+        </InlineNotice>
+      </PageContainer>
     );
   }
 
@@ -90,74 +97,97 @@ export const TemplateDetails = ({ templateUuid }: TemplateDetailsProps) => {
   };
 
   return (
-    <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
-      <Link to="/templates" className="inline-flex items-center gap-2 text-sm font-medium text-[#7A6208] hover:underline">
-        <ArrowLeft className="h-4 w-4" /> Back to Templates
-      </Link>
-      <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight text-[#111827]">{template.name}</h1>
+    <PageContainer>
+      <PageHeader
+        title={template.name}
+        description={template.description || "Reusable email template."}
+        breadcrumbs={
+          <div className="flex items-center gap-2">
+            <Link
+              to="/templates"
+              className="inline-flex items-center gap-2 text-sm font-medium text-[#7A6208] hover:underline"
+            >
+              <ArrowLeft className="h-4 w-4" /> Back to Templates
+            </Link>
             <span className="rounded-full border border-[#D8C990] bg-[#F8F0D7] px-3 py-1 text-xs font-semibold text-[#735E10]">
               {statusLabel(template.status)}
             </span>
           </div>
-          <p className="mt-1.5 max-w-2xl text-sm text-[#756E5C]">{template.description || "Reusable email template."}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {template.status === "published" ? (
+        }
+        actions={
+          <>
+            {template.status === "published" ? (
+              <button
+                type="button"
+                onClick={() => navigate({ to: "/templates" })}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#8F740D] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#735D0B]"
+              >
+                <ArrowLeft className="h-4 w-4" /> Continue to Templates
+              </button>
+            ) : null}
+            {canEdit ? (
+              <Link
+                to="/templates/$templateUuid/edit"
+                params={{ templateUuid }}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#8F740D] px-4 py-2.5 text-sm font-semibold text-white"
+              >
+                <Edit3 className="h-4 w-4" /> Edit
+              </Link>
+            ) : (
+              <span className="inline-flex items-center gap-2 rounded-xl border border-[#DED7C7] bg-white px-4 py-2.5 text-sm font-semibold text-[#7B7464]">
+                <Edit3 className="h-4 w-4" /> Edit (draft only)
+              </span>
+            )}
+            {template.status === "draft" && (
+              <button
+                type="button"
+                onClick={() =>
+                  runAction(
+                    () => publishMutation.mutateAsync(templateUuid),
+                    "Template published successfully.",
+                  )
+                }
+                className="inline-flex items-center gap-2 rounded-xl border border-[#D7C98F] bg-white px-4 py-2.5 text-sm font-semibold text-[#6E590A]"
+              >
+                <Send className="h-4 w-4" /> Publish
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => navigate({ to: "/templates" })}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#8F740D] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#735D0B]"
+              onClick={async () => {
+                setFeedback(null);
+                try {
+                  const duplicated = await duplicateMutation.mutateAsync({
+                    uuid: templateUuid,
+                    name: `${template.name} Copy`,
+                  });
+                  setFeedback({ tone: "success", text: "Template duplicated as a draft." });
+                  navigate({
+                    to: "/templates/$templateUuid/edit",
+                    params: { templateUuid: duplicated.uuid },
+                  });
+                } catch (error) {
+                  setFeedback({
+                    tone: "error",
+                    text: getApiErrorMessage(
+                      error,
+                      "The template action could not be completed.",
+                    ),
+                  });
+                }
+              }}
+              className="inline-flex items-center gap-2 rounded-xl border border-[#DED7C7] bg-white px-4 py-2.5 text-sm font-semibold text-[#554F41]"
             >
-              <ArrowLeft className="h-4 w-4" /> Continue to Templates
+              <Copy className="h-4 w-4" /> Duplicate
             </button>
-          ) : null}
-          {canEdit ? (
-            <Link
-              to="/templates/$templateUuid/edit"
-              params={{ templateUuid }}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#8F740D] px-4 py-2.5 text-sm font-semibold text-white"
-            >
-              <Edit3 className="h-4 w-4" /> Edit
-            </Link>
-          ) : (
-            <span className="inline-flex items-center gap-2 rounded-xl border border-[#DED7C7] bg-white px-4 py-2.5 text-sm font-semibold text-[#7B7464]">
-              <Edit3 className="h-4 w-4" /> Edit (draft only)
-            </span>
-          )}
-          {template.status === "draft" && (
-            <button
-              type="button"
-              onClick={() => runAction(() => publishMutation.mutateAsync(templateUuid), "Template published successfully.")}
-              className="inline-flex items-center gap-2 rounded-xl border border-[#D7C98F] bg-white px-4 py-2.5 text-sm font-semibold text-[#6E590A]"
-            >
-              <Send className="h-4 w-4" /> Publish
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={async () => {
-              setFeedback(null);
-              try {
-                const duplicated = await duplicateMutation.mutateAsync({ uuid: templateUuid, name: `${template.name} Copy` });
-                setFeedback({ tone: "success", text: "Template duplicated as a draft." });
-                navigate({ to: "/templates/$templateUuid/edit", params: { templateUuid: duplicated.uuid } });
-              } catch (error) {
-                setFeedback({ tone: "error", text: getApiErrorMessage(error, "The template action could not be completed.") });
-              }
-            }}
-            className="inline-flex items-center gap-2 rounded-xl border border-[#DED7C7] bg-white px-4 py-2.5 text-sm font-semibold text-[#554F41]"
-          >
-            <Copy className="h-4 w-4" /> Duplicate
-          </button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {feedback && <div className="mt-5"><InlineNotice tone={feedback.tone}>{feedback.text}</InlineNotice></div>}
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+      <PageSection>
+        <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
         <aside className="space-y-5">
           <section className="rounded-2xl border border-[#E8E1D0] bg-white p-5">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F8F0D7] text-[#8F740D]">
@@ -229,6 +259,7 @@ export const TemplateDetails = ({ templateUuid }: TemplateDetailsProps) => {
           </div>
         </section>
       </div>
+      </PageSection>
 
       <Modal open={confirmArchive} title="Archive template?" description="Are you sure you want to archive this template? You can restore it later from Archived Templates." onClose={() => setConfirmArchive(false)}>
         <div className="flex justify-end gap-3">
@@ -263,6 +294,6 @@ export const TemplateDetails = ({ templateUuid }: TemplateDetailsProps) => {
           }} className="rounded-xl bg-[#B42318] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-55">Delete Template</button>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 };

@@ -3,6 +3,7 @@ import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, Check, Save, Send } from "lucide-react";
 import { InlineNotice } from "../../../shared/components/InlineNotice";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
+import { PageContainer } from "../../../shared/components/layout";
 import { useToast } from "../../../shared/hooks/useToast";
 import { getApiErrorMessage, getApiFieldErrors } from "../../../shared/utils/apiError";
 import {
@@ -281,26 +282,26 @@ export const TemplateWizard = ({ templateUuid }: TemplateWizardProps) => {
 
   if (editing && templateQuery.isLoading) {
     return (
-      <div className="mx-auto max-w-[1480px] space-y-4 px-4 py-6 sm:px-6 lg:px-8">
+      <PageContainer className="space-y-4">
         <div className="h-10 w-72 animate-pulse rounded-xl bg-[#EEE9DC]" />
         <div className="h-[620px] animate-pulse rounded-2xl bg-[#F1EDE3]" />
-      </div>
+      </PageContainer>
     );
   }
 
   if (editing && templateQuery.isError) {
     return (
-      <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
+      <PageContainer>
         <InlineNotice tone="error">
           {getApiErrorMessage(templateQuery.error, "The template could not be opened.")}
         </InlineNotice>
-      </div>
+      </PageContainer>
     );
   }
 
   if (editing && editingLocked) {
     return (
-      <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
+      <PageContainer>
         <InlineNotice tone="error">
           Published and archived templates are read-only in this editor. Duplicate the template to create a new draft before editing.
         </InlineNotice>
@@ -313,7 +314,7 @@ export const TemplateWizard = ({ templateUuid }: TemplateWizardProps) => {
             <ArrowLeft className="h-4 w-4" /> Back to Template
           </Link>
         </div>
-      </div>
+      </PageContainer>
     );
   }
 
@@ -332,7 +333,7 @@ export const TemplateWizard = ({ templateUuid }: TemplateWizardProps) => {
   };
 
   return (
-    <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
+    <PageContainer>
       <ConfirmDialog
         open={blocker.status === "blocked"}
         onOpenChange={(open) => { if (!open && blocker.status === "blocked") blocker.reset(); }}
@@ -471,6 +472,6 @@ export const TemplateWizard = ({ templateUuid }: TemplateWizardProps) => {
           )}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 };

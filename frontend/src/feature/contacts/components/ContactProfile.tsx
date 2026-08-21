@@ -9,6 +9,7 @@ import { AvatarInitials } from "../../organization/components/shared/AvatarIniti
 import { deleteContact, updateContact } from "../api/contactsApi";
 import { getApiErrorMessage } from "../../../shared/utils/apiError";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
+import { PageContainer, PageSection } from "../../../shared/components/layout";
 
 // ─── Timeline icons map ───────────────────────────────────────────────────────
 
@@ -171,7 +172,7 @@ export const ContactProfile = () => {
   };
 
   return (
-    <div className="mx-auto max-w-[1480px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+    <PageContainer>
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
@@ -192,7 +193,8 @@ export const ContactProfile = () => {
       </div>
 
       {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
+      <PageSection>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
         {/* Left Column */}
         <div className="space-y-6">
           {/* Main card metadata header */}
@@ -342,7 +344,8 @@ export const ContactProfile = () => {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      </PageSection>
 
       {isEditing && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-[#1A1C1C]/45 p-4" role="dialog" aria-modal="true" aria-label="Edit contact">
@@ -367,6 +370,6 @@ export const ContactProfile = () => {
           </form>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 };

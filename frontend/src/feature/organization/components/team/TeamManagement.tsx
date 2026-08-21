@@ -10,6 +10,7 @@ import { PendingInvites } from "./PendingInvites";
 import type { RoleCode } from "../../types/organization.types";
 import { TeamTabs } from "./TeamTabs";
 import { AppSelect } from "../../../../shared/components/AppSelect";
+import { PageContainer } from "../../../../shared/components/layout";
 
 export const TeamManagement = () => {
   const [page, setPage] = useState(1);
@@ -41,7 +42,7 @@ export const TeamManagement = () => {
   const resetToFirstPage = () => setPage(1);
 
   return (
-    <div className="mx-auto max-w-[1480px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+    <PageContainer nested>
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-[#1A1C1C]">Team Management</h1>
@@ -132,6 +133,6 @@ export const TeamManagement = () => {
           <PendingInvites invitations={invitations} />
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 };

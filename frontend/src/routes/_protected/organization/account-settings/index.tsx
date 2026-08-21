@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Upload, Loader2, Mail, Phone, Globe, MapPin, Search, Edit2, Trash2 } from "lucide-react";
 import { useAuthStore } from "../../../../shared/store/AuthStore";
 import { updateProfile, uploadProfileImage, getCurrentUser } from "../../../../shared/api/authApi";
 import { getApiErrorMessage } from "../../../../shared/utils/apiError";
 import { ConfirmDialog } from "../../../../shared/components/ConfirmDialog";
 import { useToast } from "../../../../shared/hooks/useToast";
+import { userProfileSchema, type UserProfileValues } from "../../../../feature/organization/schema/userProfileSchema";
 
 export const Route = createFileRoute("/_protected/organization/account-settings/")({
   loader: async () => {
@@ -84,27 +87,50 @@ function ProfilePage() {
   const { showToast } = useToast();
 
   // Local Form States
-  const [fullName, setFullName] = useState(() => toTitleCase(user?.full_name ?? ""));
-  const [email, setEmail] = useState(user?.email ?? "");
-  const [phone, setPhone] = useState(user?.phone ?? "");
-  const [countryCode, setCountryCode] = useState(user?.country_code ?? "+1");
-  const [timezone, setTimezone] = useState(user?.timezone ?? "UTC");
-  const [location, setLocation] = useState(user?.location ?? "");
-  const [profileImage, setProfileImage] = useState(user?.profile_image ?? "");
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    formState: { errors, isDirty },
+  } = useForm<UserProfileValues>({
+    resolver: zodResolver(userProfileSchema),
+    defaultValues: {
+      full_name: toTitleCase(user?.full_name ?? ""),
+      phone: user?.phone ?? "",
+      country_code: user?.country_code ?? "+1",
+      timezone: user?.timezone ?? "UTC",
+      location: user?.location ?? "",
+      profile_image: user?.profile_image ?? "",
+    },
+  });
 
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isRemovingImage, setIsRemovingImage] = useState(false);
   const [removePhotoOpen, setRemovePhotoOpen] = useState(false);
-  const [dirty, setDirty] = useState(false);
 
-  const resolvedFullName = dirty ? fullName : toTitleCase(user?.full_name ?? "");
-  const resolvedEmail = dirty ? email : (user?.email ?? "");
-  const resolvedPhone = dirty ? phone : (user?.phone ?? "");
-  const resolvedCountryCode = dirty ? countryCode : (user?.country_code ?? "+1");
-  const resolvedTimezone = dirty ? timezone : (user?.timezone ?? "UTC");
-  const resolvedLocation = dirty ? location : (user?.location ?? "");
-  const resolvedProfileImage = dirty ? profileImage : (user?.profile_image ?? "");
+  const resolvedFullName = watch("full_name");
+  const resolvedEmail = user?.email ?? "";
+  const resolvedPhone = watch("phone");
+  const resolvedCountryCode = watch("country_code");
+  const resolvedTimezone = watch("timezone");
+  const resolvedLocation = watch("location");
+  const resolvedProfileImage = watch("profile_image");
+
+  useEffect(() => {
+    if (user) {
+      reset({
+        full_name: toTitleCase(user.full_name ?? ""),
+        phone: user.phone ?? "",
+        country_code: user.country_code ?? "+1",
+        timezone: user.timezone ?? "UTC",
+        location: user.location ?? "",
+        profile_image: user.profile_image ?? "",
+      });
+    }
+  }, [user, reset]);
 
   // Custom Dropdown Open States
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
@@ -135,10 +161,6 @@ function ProfilePage() {
     };
   }, []);
 
-  const handleFieldChange = () => {
-    if (!dirty) setDirty(true);
-  };
-
   // Workable Multipart Image Upload
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -160,7 +182,7 @@ function ProfilePage() {
       // 1. Render local preview immediately
       const reader = new FileReader();
       reader.onloadend = () => {
-        setProfileImage(reader.result as string);
+        setValue("profile_image", reader.result as string, { shouldDirty: true });
       };
       reader.readAsDataURL(file);
 
@@ -170,14 +192,14 @@ function ProfilePage() {
         const response = await uploadProfileImage(file);
         const uploadedUrl = response.url;
         if (uploadedUrl) {
-          setProfileImage(uploadedUrl);
+          setValue("profile_image", uploadedUrl, { shouldDirty: true });
           // The upload endpoint persists the profile image immediately; keep
           // the global authenticated user in sync so the avatar updates without refresh.
           store.setUser({ ...response, profile_image: uploadedUrl });
           showToast("Profile photo uploaded successfully.", "success");
         }
       } catch (error: unknown) {
-        setProfileImage(fallbackProfileImage);
+        setValue("profile_image", fallbackProfileImage);
         showToast(getApiErrorMessage(error, "Failed to upload image. Please try again."), "error");
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
@@ -193,7 +215,7 @@ function ProfilePage() {
     try {
       const updatedUser = await updateProfile({ profile_image: "" });
       store.setUser(updatedUser);
-      setProfileImage("");
+      setValue("profile_image", "", { shouldDirty: true });
       setRemovePhotoOpen(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
       showToast("Profile photo removed successfully.", "success");
@@ -204,30 +226,30 @@ function ProfilePage() {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (data: UserProfileValues) => {
     setIsSaving(true);
     try {
-      const persistableProfileImage = resolvedProfileImage.startsWith("data:")
+      const persistableProfileImage = data.profile_image?.startsWith("data:")
         ? (user?.profile_image ?? "")
-        : resolvedProfileImage;
+        : data.profile_image;
 
       const updatedUser = await updateProfile({
-        full_name: resolvedFullName.trim(),
-        phone: resolvedPhone.trim(),
-        country_code: resolvedCountryCode.trim(),
-        timezone: resolvedTimezone.trim(),
-        location: resolvedLocation.trim(),
+        full_name: data.full_name.trim(),
+        phone: data.phone?.trim() ?? "",
+        country_code: data.country_code.trim(),
+        timezone: data.timezone.trim(),
+        location: data.location?.trim() ?? "",
         profile_image: persistableProfileImage,
       });
       store.setUser(updatedUser);
-      setFullName(toTitleCase(updatedUser.full_name ?? ""));
-      setEmail(updatedUser.email ?? "");
-      setPhone(updatedUser.phone ?? "");
-      setCountryCode(updatedUser.country_code ?? "+1");
-      setTimezone(updatedUser.timezone ?? "UTC");
-      setLocation(updatedUser.location ?? "");
-      setProfileImage(updatedUser.profile_image ?? "");
-      setDirty(false);
+      reset({
+        full_name: toTitleCase(updatedUser.full_name ?? ""),
+        phone: updatedUser.phone ?? "",
+        country_code: updatedUser.country_code ?? "+1",
+        timezone: updatedUser.timezone ?? "UTC",
+        location: updatedUser.location ?? "",
+        profile_image: updatedUser.profile_image ?? "",
+      });
       setIsEditing(false);
       showToast("Profile updated successfully", "success");
     } catch (error: unknown) {
@@ -238,17 +260,15 @@ function ProfilePage() {
   };
 
   const handleCancel = () => {
-    if (user) {
-      setFullName(toTitleCase(user.full_name ?? ""));
-      setEmail(user.email ?? "");
-      setPhone(user.phone ?? "");
-      setCountryCode(user.country_code ?? "+1");
-      setTimezone(user.timezone ?? "UTC");
-      setLocation(user.location ?? "");
-      setProfileImage(user.profile_image ?? "");
-      setDirty(false);
-      setIsEditing(false);
-    }
+    reset({
+      full_name: toTitleCase(user?.full_name ?? ""),
+      phone: user?.phone ?? "",
+      country_code: user?.country_code ?? "+1",
+      timezone: user?.timezone ?? "UTC",
+      location: user?.location ?? "",
+      profile_image: user?.profile_image ?? "",
+    });
+    setIsEditing(false);
   };
 
   const filteredCountries = COUNTRIES.filter(
@@ -311,7 +331,7 @@ function ProfilePage() {
                 />
               ) : (
                 <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#F1D442]/40 to-[#E2C635]/20 border border-[#CEC6B0]/40 flex items-center justify-center font-bold text-2xl text-[#8F740D]">
-                  {fullName ? fullName[0].toUpperCase() : "U"}
+                  {resolvedFullName ? resolvedFullName[0].toUpperCase() : "U"}
                 </div>
               )}
               <div>
@@ -436,14 +456,14 @@ function ProfilePage() {
                 <input
                   id="prof-name"
                   type="text"
-                  value={resolvedFullName}
-                  maxLength={50}
-                  onChange={(e) => {
-                    setFullName(e.target.value);
-                    handleFieldChange();
-                  }}
+                  {...register("full_name")}
                   className="w-full px-3 py-2.5 rounded-xl border border-[#CEC6B0]/60 text-sm text-[#1A1C1C] bg-white focus:outline-none focus:ring-2 focus:ring-[#F1D442]/50 focus:border-[#8F740D] transition-all"
                 />
+                {errors.full_name && (
+                  <p role="alert" className="text-xs font-medium text-red-600 mt-1">
+                    {errors.full_name.message}
+                  </p>
+                )}
               </div>
 
               {/* Work Email (Locked / Disabled) */}
@@ -498,10 +518,9 @@ function ProfilePage() {
                               key={`${c.code}-${c.name}`}
                               type="button"
                               onClick={() => {
-                                setCountryCode(c.code);
+                                setValue("country_code", c.code, { shouldDirty: true });
                                 setCountryDropdownOpen(false);
                                 setCountrySearch("");
-                                handleFieldChange();
                               }}
                               className="w-full px-3 py-2 text-left text-xs hover:bg-[#F4F3F3] transition-colors flex items-center justify-between cursor-pointer"
                             >
@@ -524,15 +543,15 @@ function ProfilePage() {
                   <div className="relative flex-1">
                     <input
                       type="text"
-                      value={resolvedPhone}
-                      maxLength={50}
-                      onChange={(e) => {
-                        setPhone(e.target.value);
-                        handleFieldChange();
-                      }}
+                      {...register("phone")}
                       placeholder="Enter phone number"
                       className="w-full px-3 py-2.5 rounded-xl border border-[#CEC6B0]/60 text-sm text-[#1A1C1C] bg-white focus:outline-none focus:ring-2 focus:ring-[#F1D442]/50 focus:border-[#8F740D] transition-all"
                     />
+                    {errors.phone && (
+                      <p role="alert" className="text-xs font-medium text-red-600 mt-1">
+                        {errors.phone.message}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -571,10 +590,9 @@ function ProfilePage() {
                             key={tz}
                             type="button"
                             onClick={() => {
-                              setTimezone(tz);
+                              setValue("timezone", tz, { shouldDirty: true });
                               setTimezoneDropdownOpen(false);
                               setTimezoneSearch("");
-                              handleFieldChange();
                             }}
                             className="w-full px-3 py-2.5 text-left text-xs hover:bg-[#F4F3F3] transition-colors cursor-pointer"
                           >
@@ -600,15 +618,15 @@ function ProfilePage() {
                   <input
                     id="prof-location"
                     type="text"
-                    value={resolvedLocation}
-                    maxLength={255}
-                    onChange={(e) => {
-                      setLocation(e.target.value);
-                      handleFieldChange();
-                    }}
+                    {...register("location")}
                     placeholder="e.g. Mumbai, India"
                     className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#CEC6B0]/60 text-sm text-[#1A1C1C] bg-white focus:outline-none focus:ring-2 focus:ring-[#F1D442]/50 focus:border-[#8F740D] transition-all"
                   />
+                  {errors.location && (
+                    <p role="alert" className="text-xs font-medium text-red-600 mt-1">
+                      {errors.location.message}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -626,8 +644,8 @@ function ProfilePage() {
             Cancel
           </button>
           <button
-            onClick={handleSave}
-            disabled={!dirty || isSaving}
+            onClick={handleSubmit(handleSave)}
+            disabled={!isDirty || isSaving}
             className="flex items-center gap-2 px-5 py-2.5 bg-[#8F740D] hover:bg-[#6A5B00] text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
           >
             {isSaving ? (

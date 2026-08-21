@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, User, Mail, Lock, Loader2, AlertCircle } from "lucide-react";
 import { declineInvite } from "../../feature/login/api/registerApi";
 import { useInviteValidation } from "../../feature/login/hooks/useInviteValidation";
-import { getApiErrorMessage } from "../../shared/utils/apiError";
+import { getApiErrorMessage, getApiFieldErrors } from "../../shared/utils/apiError";
 import { createAccountSchema, type createAccountFormData } from "../../feature/login/schema/register";
 import { useCreateAccount } from "../../feature/login/hooks/useregister";
 import { clearPendingInvitationToken, storePendingInvitationToken } from "../../shared/auth/pendingInvitation";
@@ -31,22 +31,37 @@ function InviteLandingPage() {
   const [isDeclining, setIsDeclining] = useState(false);
   const [declineError, setDeclineError] = useState<string | null>(null);
 
-  const { mutate, isPending, isError } = useCreateAccount();
+  const { mutate, isPending, isError, error } = useCreateAccount();
 
   const {
     register,
     handleSubmit,
     setValue,
+    setError,
     formState: { errors },
   } = useForm<createAccountFormData>({
     resolver: zodResolver(createAccountSchema),
   });
+
+  const serverFieldErrors = (error ? getApiFieldErrors(error) : {}) as Record<string, string>;
+  const hasServerFieldErrors = Object.keys(serverFieldErrors).length > 0;
+
+  console.log("INVITE ERROR:", error);
+  console.log("SERVER FIELD ERRORS:", serverFieldErrors);
+  console.log("HAS SERVER FIELD ERRORS:", hasServerFieldErrors);
 
   useEffect(() => {
     if (inviteData?.email) {
       setValue('email', inviteData.email)
     }
   }, [inviteData?.email, setValue])
+
+  // Sync server field errors to form
+  useEffect(() => {
+    for (const [field, message] of Object.entries(serverFieldErrors)) {
+      setError(field as keyof createAccountFormData, { type: "server", message });
+    }
+  }, [serverFieldErrors, setError])
 
   const onSubmit: SubmitHandler<createAccountFormData> = (data) => {
     mutate({
@@ -219,9 +234,17 @@ function InviteLandingPage() {
               )}
             </div>
 
-            {isError && (
+            {isError && !hasServerFieldErrors && (
               <p className="text-xs text-red-600 font-medium text-center">
                 Registration failed. Please check your credentials and try again.
+              </p>
+            )}
+            {errors.email?.message?.toLowerCase().includes("already registered") && (
+              <p className="text-xs text-red-600 font-medium text-center">
+                This email is already registered.{" "}
+                <Link to="/login" className="underline hover:text-primary">
+                  Login instead
+                </Link>
               </p>
             )}
             {declineError && (

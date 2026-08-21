@@ -20,6 +20,7 @@ import { AppSelect } from "../../../shared/components/AppSelect";
 import { PaginationControls } from "../../../shared/components/PaginationControls";
 import { InlineNotice } from "../../../shared/components/InlineNotice";
 import { getApiErrorMessage } from "../../../shared/utils/apiError";
+import { PageContainer, PageHeader, PageSection } from "../../../shared/components/layout";
 import {
   useArchiveCampaign,
   useCampaignSummary,
@@ -263,31 +264,34 @@ export const CampaignDashboard = () => {
   );
 
   return (
-    <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-[#111827]">Campaigns</h1>
-          <p className="mt-1.5 text-sm text-[#756E5C]">Create, launch, and monitor organization email campaigns.</p>
-        </div>
-        <Link
-          to="/campaigns/new"
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#8F740D] px-5 py-3 text-sm font-semibold text-white shadow-button hover:bg-[#735D0B]"
-        >
-          <Plus className="h-4 w-4" /> Create Campaign
-        </Link>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Campaigns"
+        description="Create, launch, and monitor organization email campaigns."
+        actions={
+          <Link
+            to="/campaigns/new"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#8F740D] px-5 py-3 text-sm font-semibold text-white shadow-button hover:bg-[#735D0B]"
+          >
+            <Plus className="h-4 w-4" /> Create Campaign
+          </Link>
+        }
+      />
 
       {feedback && <div className="mt-5"><InlineNotice tone={feedback.tone}>{feedback.text}</InlineNotice></div>}
 
-      <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <SummaryCard icon={Send} label="Total Campaigns" value={summary?.total_campaigns ?? 0} description="All campaigns" />
-        <SummaryCard icon={PlayCircle} label="Active" value={summary?.active ?? 0} description="Currently sending" />
-        <SummaryCard icon={Clock3} label="Scheduled" value={summary?.scheduled ?? 0} description="Waiting to start" />
-        <SummaryCard icon={PauseCircle} label="Paused" value={summary?.paused ?? 0} description="Temporarily stopped" />
-        <SummaryCard icon={CheckCircle2} label="Drafts" value={summary?.drafts ?? 0} description="Still being configured" />
-      </div>
+      <PageSection>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <SummaryCard icon={Send} label="Total Campaigns" value={summary?.total_campaigns ?? 0} description="All campaigns" />
+          <SummaryCard icon={PlayCircle} label="Active" value={summary?.active ?? 0} description="Currently sending" />
+          <SummaryCard icon={Clock3} label="Scheduled" value={summary?.scheduled ?? 0} description="Waiting to start" />
+          <SummaryCard icon={PauseCircle} label="Paused" value={summary?.paused ?? 0} description="Temporarily stopped" />
+          <SummaryCard icon={CheckCircle2} label="Drafts" value={summary?.drafts ?? 0} description="Still being configured" />
+        </div>
+      </PageSection>
 
-      <div className="mt-6 inline-flex rounded-xl border border-[#DED7C7] bg-white p-1">
+      <PageSection>
+        <div className="inline-flex rounded-xl border border-[#DED7C7] bg-white p-1">
         <button type="button" onClick={() => { setSection("active"); setStatus(""); setPage(1); }} className={`rounded-lg px-4 py-2 text-sm font-semibold ${section === "active" ? "bg-[#8F740D] text-white" : "text-[#625A47] hover:bg-[#F8F5EC]"}`}>Active Campaigns</button>
         <button type="button" onClick={() => { setSection("archived"); setStatus(""); setPage(1); }} className={`rounded-lg px-4 py-2 text-sm font-semibold ${section === "archived" ? "bg-[#8F740D] text-white" : "text-[#625A47] hover:bg-[#F8F5EC]"}`}>Archived Campaigns</button>
       </div>
@@ -400,6 +404,7 @@ export const CampaignDashboard = () => {
           </div>
         )}
       </section>
+    </PageSection>
 
       {campaignPendingDelete && (
         <div
@@ -451,6 +456,6 @@ export const CampaignDashboard = () => {
           </div>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 };
