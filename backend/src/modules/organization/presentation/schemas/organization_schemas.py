@@ -188,7 +188,7 @@ class CurrentOrganizationDetailsResponseSchema(BaseSchema):
     status: str
     owner_id: int
     created_at: datetime
-    updated_at: datetime
+    updated_at: datetime | None = None
     deletion_requested_at: datetime | None = None
     deletion_requested_by_id: int | None = None
     scheduled_deletion_at: datetime | None = None
