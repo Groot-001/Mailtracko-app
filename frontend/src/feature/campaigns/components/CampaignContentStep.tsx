@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -31,12 +32,26 @@ const TemplateSelect = ({
   label?: string;
 }) => {
   const templatesQuery = useTemplates({ status: "published", limit: 100, offset: 0 });
+  const defaultTemplate = useMemo(
+    () => templatesQuery.data?.items.find((t) => t.is_default),
+    [templatesQuery.data?.items],
+  );
+
+  useEffect(() => {
+    if (!value && defaultTemplate) {
+      onChange(defaultTemplate.uuid);
+    }
+  }, [value, defaultTemplate, onChange]);
+
   return (
     <label className="block space-y-2">
       <span className="text-sm font-semibold text-[#302C24]">{label}</span>
       <AppSelect value={value} onValueChange={onChange} ariaLabel={label} searchable options={[{ value: "", label: "Select a published template" }, ...(templatesQuery.data?.items.map((template) => ({ value: template.uuid, label: `${template.name} — ${template.subject}` })) ?? [])]} />
       {templatesQuery.isError && (
         <span className="text-xs text-[#B42318]">Published templates could not be loaded.</span>
+      )}
+      {defaultTemplate && !value && (
+        <span className="text-xs text-[#8F740D]">Default template selected automatically.</span>
       )}
     </label>
   );

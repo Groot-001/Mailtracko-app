@@ -259,7 +259,7 @@ export const TemplateWizard = ({ templateUuid }: TemplateWizardProps) => {
       await publishMutation.mutateAsync(saved.uuid);
       allowNavigationRef.current = true;
       showToast("Template published successfully.", "success");
-      navigate({ to: "/templates/$templateUuid", params: { templateUuid: saved.uuid } });
+      navigate({ to: "/templates" });
     } catch (error) {
       setFeedback({ tone: "error", text: getApiErrorMessage(error, "Template was saved but could not be published.") });
     }
