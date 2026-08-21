@@ -137,6 +137,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
   };
 
   const insertMergeVariableAtCursor = (variable: string) => {
+    captureSelection();
     const normalized = variable.trim().replace(/^\{\{\s*|\s*\}\}$/g, "");
     if (!normalized) return;
     if (sourceMode && sourceRef.current) {
@@ -196,7 +197,9 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
       setImageError("This URL did not load a valid image. Use a direct public HTTPS image URL.");
       return;
     }
-    runCommand("insertImage", url);
+    // Insert image with consistent max-height styling
+    const imgHtml = `<img src="${url}" style="max-height: 200px; width: auto; display: block;" />`;
+    document.execCommand("insertHTML", false, imgHtml);
     setImageUrl("");
     setImageError(null);
     setImageDialogOpen(false);
@@ -223,7 +226,9 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
         return;
       }
       const asset = await uploadTemplateImage(resolvedUuid, file);
-      runCommand("insertImage", asset.file_url);
+      // Insert image with consistent max-height styling
+      const imgHtml = `<img src="${asset.file_url}" style="max-height: 200px; width: auto; display: block;" />`;
+      document.execCommand("insertHTML", false, imgHtml);
     } catch (uploadError) {
       setImageError(getApiErrorMessage(uploadError, "Image could not be uploaded."));
     } finally {
@@ -371,7 +376,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
             onMouseUp={captureSelection}
             onKeyUp={captureSelection}
             onFocus={captureSelection}
-            className="min-h-[340px] min-w-0 overflow-x-auto break-words px-5 py-4 text-sm leading-7 text-[#1F2937] outline-none [&_a]:break-all [&_a]:text-[#7A6208] [&_a]:underline [&_h2]:mb-3 [&_h2]:text-2xl [&_h2]:font-bold [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_img]:h-auto [&_img]:max-w-full [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:mb-3 [&_pre]:whitespace-pre-wrap [&_ul]:list-disc [&_ul]:pl-6"
+            className="min-h-[340px] min-w-0 overflow-x-auto break-words px-5 py-4 text-sm leading-7 text-[#1F2937] outline-none [&_a]:break-all [&_a]:text-[#7A6208] [&_a]:underline [&_h2]:mb-3 [&_h2]:text-2xl [&_h2]:font-bold [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_img]:h-auto [&_img]:max-w-full [&_img]:max-w-[600px] [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:mb-3 [&_pre]:whitespace-pre-wrap [&_ul]:list-disc [&_ul]:pl-6"
           />
         )}
       </div>
