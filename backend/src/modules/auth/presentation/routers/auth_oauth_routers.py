@@ -20,25 +20,22 @@ AsyncSessionDep = Annotated[AsyncSession, Depends(get_async_session)]
 
 
 def _google_callback_origin() -> str:
-    """Return the browser origin that owns Google's callback URL.
+    """Return the browser origin for post-OAuth redirect.
 
-    The OAuth response sets a host-only session cookie. Redirecting to a
-    different hostname immediately afterwards (for example localhost ->
-    127.0.0.1) makes the browser correctly withhold that cookie and looks like
-    a failed login. Keep the post-OAuth navigation on the exact callback
-    origin so the cookie remains available to MailTracko.
+    Uses the computed google_redirect_uri (derived from FRONTEND_URL) so the
+    redirect goes to the frontend where the session cookie will be used.
     """
 
-    parsed = urlsplit(config.GOOGLE_REDIRECT_URI)
+    parsed = urlsplit(config.google_redirect_uri)
     if parsed.scheme in {"http", "https"} and parsed.netloc:
         return f"{parsed.scheme}://{parsed.netloc}"
     return config.FRONTEND_URL.rstrip("/")
 
 
 def _oauth_cookie_secure() -> bool:
-    """Secure cookies only when the browser-facing OAuth callback uses HTTPS."""
+    """Secure cookies only when the frontend uses HTTPS."""
 
-    return urlsplit(_google_callback_origin()).scheme == "https"
+    return urlsplit(config.FRONTEND_URL).scheme.lower() == "https"
 
 
 @router.get("/login/{provider}")

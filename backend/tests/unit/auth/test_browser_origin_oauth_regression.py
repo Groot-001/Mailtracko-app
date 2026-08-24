@@ -56,21 +56,25 @@ def test_production_mode_allows_loopback_only_when_google_callback_is_loopback(m
     from types import SimpleNamespace
     import src.shared.security.browser_origin as browser_origin
 
-    local_oauth_config = SimpleNamespace(
-        FRONTEND_URL="https://app.mailtracko.com",
-        CORS_ALLOWED_ORIGINS=["https://app.mailtracko.com"],
-        GOOGLE_REDIRECT_URI="http://localhost:3000/api/v1/auth/oauth/callback/google",
-        is_production=True,
-    )
+    def make_config(redirect_uri: str):
+        cfg = SimpleNamespace(
+            FRONTEND_URL="https://app.mailtracko.com",
+            CORS_ALLOWED_ORIGINS=["https://app.mailtracko.com"],
+            GOOGLE_REDIRECT_URI=redirect_uri,
+            is_production=True,
+        )
+        # The code now uses the computed property google_redirect_uri
+        @property
+        def google_redirect_uri(self):
+            return self.GOOGLE_REDIRECT_URI or f"{self.FRONTEND_URL.rstrip('/')}/api/v1/auth/oauth/callback/google"
+        type(cfg).google_redirect_uri = google_redirect_uri
+        return cfg
+
+    local_oauth_config = make_config("http://localhost:3000/api/v1/auth/oauth/callback/google")
     monkeypatch.setattr(browser_origin, "config", local_oauth_config)
     assert browser_origin.is_trusted_frontend_origin("http://localhost:3000") is True
 
-    real_production_config = SimpleNamespace(
-        FRONTEND_URL="https://app.mailtracko.com",
-        CORS_ALLOWED_ORIGINS=["https://app.mailtracko.com"],
-        GOOGLE_REDIRECT_URI="https://app.mailtracko.com/api/v1/auth/oauth/callback/google",
-        is_production=True,
-    )
+    real_production_config = make_config("https://app.mailtracko.com/api/v1/auth/oauth/callback/google")
     monkeypatch.setattr(browser_origin, "config", real_production_config)
     assert browser_origin.is_trusted_frontend_origin("http://localhost:3000") is False
     assert (

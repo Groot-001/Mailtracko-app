@@ -64,24 +64,43 @@ class Settings(BaseSettings):
     ORGANIZATION_DELETION_GRACE_DAYS: int = 3
     OTP_DIGIT: int = 6
 
-    # OAuth
+# OAuth
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
-    GOOGLE_REDIRECT_URI: str = "http://localhost:8080/api/v1/auth/oauth/callback/google"
+    GOOGLE_REDIRECT_URI: str = ""
 
     # Email Account - OAuth
     GOOGLE_MAIL_CLIENT_ID: str = ""
     GOOGLE_MAIL_CLIENT_SECRET: str = ""
-    GOOGLE_MAIL_REDIRECT_URI: str = (
-        "http://localhost:8080/api/v1/email-accounts/oauth/callback/google"
-    )
+    GOOGLE_MAIL_REDIRECT_URI: str = ""
 
     # Google Sheets - OAuth
     GOOGLE_SHEETS_CLIENT_ID: str = ""
     GOOGLE_SHEETS_CLIENT_SECRET: str = ""
-    GOOGLE_SHEETS_REDIRECT_URI: str = (
-        "http://localhost:8080/api/v1/contact-lists/sheets/oauth/callback"
-    )
+    GOOGLE_SHEETS_REDIRECT_URI: str = ""
+
+    @property
+    def google_redirect_uri(self) -> str:
+        """OAuth redirect URI for Google web sign-in.
+        
+        Defaults to FRONTEND_URL + /api/v1/auth/oauth/callback/google so it goes
+        through the frontend proxy (nginx in Docker, Vite in dev).
+        """
+        if self.GOOGLE_REDIRECT_URI:
+            return self.GOOGLE_REDIRECT_URI
+        return f"{self.FRONTEND_URL.rstrip('/')}/api/v1/auth/oauth/callback/google"
+
+    @property
+    def google_mail_redirect_uri(self) -> str:
+        if self.GOOGLE_MAIL_REDIRECT_URI:
+            return self.GOOGLE_MAIL_REDIRECT_URI
+        return f"{self.FRONTEND_URL.rstrip('/')}/api/v1/email-accounts/oauth/callback/google"
+
+    @property
+    def google_sheets_redirect_uri(self) -> str:
+        if self.GOOGLE_SHEETS_REDIRECT_URI:
+            return self.GOOGLE_SHEETS_REDIRECT_URI
+        return f"{self.FRONTEND_URL.rstrip('/')}/api/v1/contact-lists/sheets/oauth/callback"
 
     # Encryption
     SECRET_ENCRYPTION_KEY: str = ""

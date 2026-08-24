@@ -46,7 +46,7 @@ class GoogleMailOAuthClient:
             raise InvalidError(error="Gmail sender OAuth is not configured")
         params = {
             "client_id": self.client_id,
-            "redirect_uri": config.GOOGLE_MAIL_REDIRECT_URI,
+            "redirect_uri": config.google_mail_redirect_uri,
             "response_type": "code",
             "scope": " ".join(SCOPES),
             "state": state,
@@ -62,7 +62,7 @@ class GoogleMailOAuthClient:
             "code": code,
             "client_id": self.client_id,
             "client_secret": self.client_secret,
-            "redirect_uri": config.GOOGLE_MAIL_REDIRECT_URI,
+            "redirect_uri": config.google_mail_redirect_uri,
             "grant_type": "authorization_code",
         }
         resp = await self._client.post(GOOGLE_TOKEN_URL, data=data)

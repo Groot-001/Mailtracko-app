@@ -57,7 +57,7 @@ def is_trusted_frontend_origin(origin: str | None) -> bool:
     # signal that loopback OAuth is intended. A real production callback on
     # app.mailtracko.com never enables this exception.
     try:
-        google_callback_host = (urlparse(config.GOOGLE_REDIRECT_URI).hostname or "").lower()
+        google_callback_host = (urlparse(config.google_redirect_uri).hostname or "").lower()
     except ValueError:
         google_callback_host = ""
 

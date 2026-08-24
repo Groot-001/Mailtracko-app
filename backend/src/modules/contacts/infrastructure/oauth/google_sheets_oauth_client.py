@@ -41,7 +41,7 @@ class GoogleSheetsOAuthClient:
 
     @property
     def redirect_uri(self) -> str:
-        return (config.GOOGLE_SHEETS_REDIRECT_URI or "").strip()
+        return config.google_sheets_redirect_uri
 
     @staticmethod
     def _response_payload(response: Response) -> dict[str, Any]:

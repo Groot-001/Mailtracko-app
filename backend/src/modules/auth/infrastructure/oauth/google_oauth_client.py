@@ -37,7 +37,7 @@ class GoogleOAuthClient:
             raise InvalidError(error="Google sign-in is not configured")
         params = {
             "client_id": config.GOOGLE_CLIENT_ID,
-            "redirect_uri": config.GOOGLE_REDIRECT_URI,
+            "redirect_uri": config.google_redirect_uri,
             "response_type": "code",
             "scope": " ".join(SCOPES),
             "state": state,
@@ -54,7 +54,7 @@ class GoogleOAuthClient:
             "code": code,
             "client_id": config.GOOGLE_CLIENT_ID,
             "client_secret": config.GOOGLE_CLIENT_SECRET,
-            "redirect_uri": config.GOOGLE_REDIRECT_URI,
+            "redirect_uri": config.google_redirect_uri,
             "grant_type": "authorization_code",
         }
 
